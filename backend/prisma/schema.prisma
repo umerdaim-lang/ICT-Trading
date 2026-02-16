@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Market Data
+model MarketData {
+  id        String   @id @default(uuid())
+  symbol    String   @db.VarChar(20)
+  timeframe String   @db.VarChar(10) // '1H', '4H', 'D', 'W'
+  timestamp DateTime @db.Timestamptz()
+  open      Decimal  @db.Decimal(20, 8)
+  high      Decimal  @db.Decimal(20, 8)
+  low       Decimal  @db.Decimal(20, 8)
+  close     Decimal  @db.Decimal(20, 8)
+  volume    Decimal? @db.Decimal(20, 8)
+  createdAt DateTime @default(now()) @db.Timestamptz()
+
+  @@unique([symbol, timeframe, timestamp])
+  @@index([symbol, timeframe, timestamp(sort: Desc)])
+}
+
+// ICT Analysis Results
+model IctAnalysis {
+  id                    String   @id @default(uuid())
+  symbol                String   @db.VarChar(20)
+  timeframe             String   @db.VarChar(10)
+  analysisTimestamp     DateTime @default(now()) @db.Timestamptz()
+
+  // Analysis results stored as JSON for flexibility
+  orderBlocks           Json?    // [{type: 'bullish', high: 1.234, low: 1.232, timestamp: '...'}]
+  liquidityLevels       Json?    // {highs: [...], lows: [...]}
+  fairValueGaps         Json?    // [{type: 'bullish', top: 1.234, bottom: 1.232, ...}]
+  supplyDemandZones     Json?
+  breakerBlocks         Json?
+  mitigationBlocks      Json?
+
+  // Market structure
+  marketStructureShift  Json?    // [{type: 'bullish', breakLevel: 1.234, timestamp: '...'}]
+  cisd                  Json?    // Change in State of Delivery
+
+  // Claude analysis
+  claudeAnalysis        String?  @db.Text
+
+  createdAt             DateTime @default(now()) @db.Timestamptz()
+
+  @@index([symbol, analysisTimestamp(sort: Desc)])
+}
+
+// Trading Signals
+model TradingSignal {
+  id              String   @id @default(uuid())
+  symbol          String   @db.VarChar(20)
+  timeframe       String   @db.VarChar(10)
+  signalType      String   @db.VarChar(10) // 'BUY', 'SELL'
+
+  // Entry/Exit levels
+  entryPrice      Decimal  @db.Decimal(20, 8)
+  stopLoss        Decimal  @db.Decimal(20, 8)
+  takeProfit      Decimal  @db.Decimal(20, 8)
+  riskReward      Decimal? @db.Decimal(5, 2)
+
+  // ICT reasons
+  reason          String?  @db.Text // "Order block + FVG + Liquidity sweep"
+  confidence      String?  @db.VarChar(10) // 'HIGH', 'MEDIUM', 'LOW'
+
+  // Status
+  status          String   @default("ACTIVE") @db.VarChar(20) // 'ACTIVE', 'CLOSED', 'STOPPED'
+
+  createdAt       DateTime @default(now()) @db.Timestamptz()
+  closedAt        DateTime? @db.Timestamptz()
+
+  @@index([symbol, status, createdAt(sort: Desc)])
+}
+
+// Analysis History for audit and learning
+model AnalysisHistory {
+  id              String   @id @default(uuid())
+  symbol          String   @db.VarChar(20)
+  timeframe       String   @db.VarChar(10)
+  analysisData    Json
+  outcome         String?  @db.VarChar(50) // 'PROFITABLE', 'BREAKEVEN', 'LOSS', 'PENDING'
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now()) @db.Timestamptz()
+
+  @@index([symbol, createdAt(sort: Desc)])
+}
