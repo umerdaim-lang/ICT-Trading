@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 export const useTradingStore = create((set) => ({
   // State
-  symbol: 'EURUSD',
+  symbol: 'BTCUSDT',
   timeframe: '4H',
   marketData: [],
   analysis: null,
