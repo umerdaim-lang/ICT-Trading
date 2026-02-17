@@ -2,7 +2,10 @@
 
 **Last Updated**: 2026-02-17
 **Project**: Claude AI-Powered Swing Trading Analysis System
-**Status**: Phase 1 Complete - Ready for Testing
+**Status**: ✅ PRODUCTION DEPLOYED - PHASE 2 IN PROGRESS
+
+**Phase 1 Status**: ✅ COMPLETE - System deployed and live
+**Phase 2 Status**: 🔨 IN PROGRESS - TradingView integration & live data auto-fetch
 
 ---
 
@@ -10,9 +13,11 @@
 
 - **Tech Stack**: Node.js/Express (Backend), React + TypeScript (Frontend), PostgreSQL, Claude AI
 - **Location**: `F:\SMEERP\ICT-Trading\`
-- **Total Files Created**: 30
-- **Current Phase**: 1 (Setup & Scaffolding) ✅ COMPLETE
-- **Next Phase**: 2 (Backend Enhancement & Algorithm Refinement)
+- **GitHub**: `https://github.com/umerdaim-lang/ICT-Trading` ✅
+- **Total Files Created**: 40+ (including Phase 2 services & routes)
+- **Current Phase**: 2 (TradingView Integration & Live Data)
+- **Phase 1**: Setup & Scaffolding ✅ COMPLETE
+- **Phase 2**: TradingView Integration 🔨 CODE COMPLETE - AWAITING ENV VARS
 
 ---
 
@@ -42,6 +47,9 @@
 - ✅ README.md (comprehensive guide)
 - ✅ QUICK_START.md (step-by-step setup)
 - ✅ DEPLOYMENT.md (Render guide)
+- ✅ DEPLOYMENT_SUPABASE.md (Free tier deployment guide)
+- ✅ GitHub repository created and code pushed
+- ✅ .gitignore configured
 
 ---
 
@@ -304,43 +312,87 @@ See `docs/DEPLOYMENT.md` for step-by-step guide
 
 | Phase | Status | What's Included |
 |-------|--------|-----------------|
-| **1: Setup** | ✅ Complete | Folders, packages, DB schema, APIs, UI scaffolding |
-| **2: Backend Enhancement** | 📋 Pending | Breaker blocks, mitigation blocks, CISD, file uploads |
-| **3: Algorithm Refinement** | 📋 Pending | User's trading rules, backtesting, confidence tuning |
+| **1: Setup & Scaffolding** | ✅ Complete | Folders, packages, DB schema, APIs, UI scaffolding, GitHub push |
+| **1.5: Phase 1 Deployment** | ✅ Complete | Supabase + Render deployment, live system in production |
+| **2: TradingView Integration** | 🔨 In Progress | Live data auto-fetch, webhook alerts, scheduled jobs |
+| **3: Algorithm Refinement** | 📋 Pending | Breaker blocks, mitigation blocks, CISD, user rules |
 | **4: Dashboard Enhancement** | 📋 Pending | Chart overlays, watchlist, history, alerts |
-| **5: Deployment & Testing** | 📋 Pending | Render setup, load testing, monitoring |
 
 ---
 
-## 📝 What's Needed Next
+## 📝 Phase 2 (TradingView Integration) - Completed ✅
 
-### From User
-1. **Your Trading Algorithm Rules**:
+### Code Implementation Complete
+- [x] `backend/src/services/dataFetch.service.js` - Binance & Finnhub API clients
+- [x] `backend/src/services/scheduler.service.js` - node-cron 15-minute scheduler
+- [x] `backend/src/routes/webhook.js` - TradingView webhook endpoint
+- [x] `/api/market-data/live/:symbol/:timeframe` - On-demand live data fetch
+- [x] Optimized bulk insert with `createMany` + `skipDuplicates`
+- [x] Frontend market selector (dropdown with popular pairs)
+- [x] Fetch Live Data button
+- [x] 60-second auto-refresh polling
+- [x] 30-second webhook status polling
+- [x] Live data and webhook indicators on dashboard
+- [x] Code committed and pushed to GitHub
+
+### Data Sources
+- **Crypto** (BTC, ETH, BNB, SOL, XRP, ADA, DOGE, AVAX, MATIC, LINK): Binance API (free, no key needed)
+- **Metals** (XAUUSD, XAGUSD): Finnhub API (free tier, 60 req/min)
+
+---
+
+## 📝 What's Needed Next for Phase 2 Deployment
+
+### IMMEDIATE - Environment Configuration (5 min)
+1. **Get Finnhub API Key** (free):
+   - Visit: https://finnhub.io
+   - Sign up (2 minutes)
+   - Copy API key
+   - Set on Render backend service:
+     - `FINNHUB_API_KEY` = your_key
+     - `WEBHOOK_SECRET` = any random string (e.g., `openssl rand -hex 32` on Windows use UUID generator)
+
+2. **Redeploy on Render**:
+   - Push changes (already done) ✅
+   - Render will auto-deploy once env vars are set
+   - Check logs for `[Scheduler] Started` message
+
+### VERIFICATION - Test Phase 2 Features (10 min)
+1. **Live Data Endpoint**:
+   - GET `/api/market-data/live/BTCUSDT/4H?limit=100`
+   - Should return: `{ candlesFetched: 100, candlesSaved: X, source: 'binance' }`
+
+2. **Scheduler Check**:
+   - Check Render backend logs
+   - Should see: `[Scheduler] BTCUSDT 4H: fetched 100, saved X from binance`
+   - Every 15 minutes automatically
+
+3. **TradingView Webhook Setup** (Optional):
+   - Create TradingView alert with webhook
+   - URL: `https://your-render-service.onrender.com/api/webhook/tradingview`
+   - Use JSON message template from plan
+   - Test with "Send test notification"
+
+4. **Frontend**:
+   - Click "Fetch Live" button
+   - See status indicator appear
+   - Verify chart updates
+
+### From User (After Phase 2 Goes Live)
+1. **Your Trading Algorithm Rules** (Phase 3):
    - How do you identify valid order blocks?
    - What confirms an entry signal?
-   - Where's your stop loss?
-   - Where's your profit target?
+   - Where's your stop loss/take profit?
    - What's your confidence scoring?
 
-2. **Deployment Decision**:
-   - Deploy locally first for testing?
-   - Deploy to Render immediately?
-   - Use for 1 customer or all 4?
-
-3. **Feature Preferences**:
+2. **Feature Preferences**:
    - Multi-symbol watchlist?
    - Email/SMS alerts?
    - Performance metrics?
    - Backtesting module?
-
-### Implementation Tasks
-- [ ] Test system locally with sample data
-- [ ] Refine ICT concept detection based on feedback
-- [ ] Implement user's specific trading rules
 - [ ] Add chart overlays for ICT markers
-- [ ] Deploy to Render
 - [ ] Monitor Claude API costs
-- [ ] Gather trading feedback
+- [ ] Plan upgrade to paid Supabase/Render tiers (next month)
 
 ---
 
@@ -468,15 +520,32 @@ All decisions made for **simplicity and maintainability** during early phases.
 
 ## 🎉 Current Status
 
-✅ **Phase 1 (Setup) is 100% Complete**
+✅ **Phase 1 (Setup & Deployment) is 100% Complete**
+✅ **System Live in Production** (Render + Supabase)
+✅ **Code Pushed to GitHub**: https://github.com/umerdaim-lang/ICT-Trading (commit: 7881375)
+🔨 **Phase 2 (TradingView Integration): Code Complete** - Awaiting environment configuration
 
-System is ready to:
-1. Run locally for testing
-2. Deploy to Render
-3. Accept user's trading rules
-4. Process market data and generate signals
+### Phase 2 Deployment Readiness Checklist:
+- [x] Code scaffolding complete
+- [x] Backend API with ICT algorithms ready
+- [x] Frontend dashboard with market selector ready
+- [x] Live data fetch service (Binance + Finnhub) ready
+- [x] TradingView webhook handler ready
+- [x] Scheduler with 15-minute auto-fetch ready
+- [x] Documentation complete
+- [x] GitHub repository updated
+- [x] Code pushed to GitHub (main branch)
+- [x] Supabase database created & connected
+- [x] Render backend service deployed & live
+- [x] Render frontend service deployed & live
+- [ ] Finnhub API key obtained (FREE - 5 min)
+- [ ] WEBHOOK_SECRET configured on Render
+- [ ] Render re-deployed with new env vars
+- [ ] Live data fetch verified working
+- [ ] Scheduler confirmed in logs
+- [ ] TradingView alert tested (optional)
 
-**Next action**: User decides what to do - run locally, deploy, or refine algorithm.
+**Next immediate action**: Get Finnhub API key (free) → Set env vars on Render → Done!
 
 ---
 
