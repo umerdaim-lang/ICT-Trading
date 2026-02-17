@@ -112,12 +112,27 @@ router.put('/:id/close', async (req, res) => {
     const { id } = req.params;
     const { closedPrice, outcome } = req.body;
 
+    // Fetch signal first to get existing reason
+    const existingSignal = await prisma.tradingSignal.findUnique({
+      where: { id }
+    });
+
+    if (!existingSignal) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'NOT_FOUND',
+          message: 'Signal not found'
+        }
+      });
+    }
+
     const signal = await prisma.tradingSignal.update({
       where: { id },
       data: {
         status: 'CLOSED',
         closedAt: new Date(),
-        ...(outcome && { reason: `${signal.reason || ''} - Closed with outcome: ${outcome}` })
+        ...(outcome && { reason: `${existingSignal.reason || ''} - Closed with outcome: ${outcome}` })
       }
     });
 
