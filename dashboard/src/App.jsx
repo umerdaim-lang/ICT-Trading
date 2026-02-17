@@ -89,14 +89,31 @@ function App() {
       setChartData(candles);
       setMarketData(candles);
 
-      // Load latest analysis
-      const analysisRes = await analysisApi.latest(symbol, timeframe);
-      setAnalysisData(analysisRes.data.data);
-      setAnalysis(analysisRes.data.data);
+      // Load latest analysis (404 is normal if no analysis exists yet)
+      try {
+        const analysisRes = await analysisApi.latest(symbol, timeframe);
+        setAnalysisData(analysisRes.data.data);
+        setAnalysis(analysisRes.data.data);
+      } catch (analysisError) {
+        // 404 = No analysis data yet (normal), don't show as error
+        if (analysisError.response?.status !== 404) {
+          throw analysisError;
+        }
+        setAnalysisData(null);
+        setAnalysis(null);
+      }
 
       // Load active signals
-      const signalsRes = await signalsApi.getBySymbol(symbol, 'ACTIVE');
-      setActiveSignals(signalsRes.data.data.signals || []);
+      try {
+        const signalsRes = await signalsApi.getBySymbol(symbol, 'ACTIVE');
+        setActiveSignals(signalsRes.data.data.signals || []);
+      } catch (signalsError) {
+        // 404 = No signals yet (normal), don't show as error
+        if (signalsError.response?.status !== 404) {
+          throw signalsError;
+        }
+        setActiveSignals([]);
+      }
 
       setLoading(false);
     } catch (error) {
