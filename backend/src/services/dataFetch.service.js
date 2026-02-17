@@ -40,8 +40,7 @@ const TIMEFRAME_MAP = {
 // Finnhub symbol mapping for metals and forex
 const FINNHUB_SYMBOL_MAP = {
   'XAUUSD': 'OANDA:XAU_USD',
-  'XAGUSD': 'OANDA:XAG_USD',
-  'EURUSD': 'OANDA:EUR_USD'
+  'XAGUSD': 'OANDA:XAG_USD'
 };
 
 /**

@@ -10,7 +10,6 @@ const POPULAR_SYMBOLS = [
   { value: 'BNBUSDT', label: 'BNB/USDT' },
   { value: 'SOLUSDT', label: 'SOL/USDT' },
   { value: 'XRPUSDT', label: 'XRP/USDT' },
-  { value: 'EURUSD', label: 'EUR/USD' },
   { value: 'XAUUSD', label: 'XAU/USD (Gold)' },
   { value: 'XAGUSD', label: 'XAG/USD (Silver)' },
   { value: 'OTHER', label: 'Other (type symbol)' }
