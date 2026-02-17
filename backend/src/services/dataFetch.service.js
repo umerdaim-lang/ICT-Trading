@@ -120,7 +120,8 @@ export async function fetchCoinGeckoCandles(symbol, timeframe, limit = 100) {
  */
 export async function fetchFinnhubCandles(symbol, timeframe, count = 100) {
   try {
-    const apiKey = process.env.FINNHUB_API_KEY;
+    // Get API key from environment or use fallback (for development)
+    const apiKey = process.env.FINNHUB_API_KEY || 'd6a32epr01qsjlb9i6cgd6a32epr01qsjlb9i6d0';
     if (!apiKey) {
       throw new Error('FINNHUB_API_KEY environment variable not set');
     }
