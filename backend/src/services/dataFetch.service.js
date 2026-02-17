@@ -1,11 +1,25 @@
 import axios from 'axios';
 import prisma from '../utils/db.js';
 
-// Crypto symbols that use Binance API
+// Crypto symbols that use CoinGecko API (replaced Binance due to cloud IP blocking)
 const CRYPTO_SYMBOLS = new Set([
   'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT',
   'ADAUSDT', 'DOGEUSDT', 'AVAXUSDT', 'MATICUSDT', 'LINKUSDT'
 ]);
+
+// CoinGecko coin ID mapping
+const COINGECKO_SYMBOL_MAP = {
+  'BTCUSDT': 'bitcoin',
+  'ETHUSDT': 'ethereum',
+  'BNBUSDT': 'binancecoin',
+  'SOLUSDT': 'solana',
+  'XRPUSDT': 'ripple',
+  'ADAUSDT': 'cardano',
+  'DOGEUSDT': 'dogecoin',
+  'AVAXUSDT': 'avalanche-2',
+  'MATICUSDT': 'matic-network',
+  'LINKUSDT': 'chainlink'
+};
 
 // Timeframe mapping
 const TIMEFRAME_MAP = {
@@ -30,44 +44,70 @@ const FINNHUB_SYMBOL_MAP = {
 };
 
 /**
- * Fetch OHLCV candles from Binance REST API
+ * Fetch OHLCV candles from CoinGecko API (free, cloud-friendly)
  * @param {string} symbol - Trading symbol (e.g., 'BTCUSDT')
  * @param {string} timeframe - '1H', '4H', 'D', 'W'
  * @param {number} limit - Number of candles to fetch (default 100)
  * @returns {Promise<Array>} Array of normalized candle objects
  */
-export async function fetchBinanceKlines(symbol, timeframe, limit = 100) {
+export async function fetchCoinGeckoCandles(symbol, timeframe, limit = 100) {
   try {
-    const interval = TIMEFRAME_MAP.binance[timeframe.toUpperCase()];
-    if (!interval) {
-      throw new Error(`Unsupported timeframe: ${timeframe}`);
+    const upperSymbol = symbol.toUpperCase();
+    const coinId = COINGECKO_SYMBOL_MAP[upperSymbol];
+    if (!coinId) {
+      throw new Error(`Unsupported symbol for CoinGecko: ${symbol}`);
     }
 
-    const url = 'https://api.binance.com/api/v3/klines';
+    // CoinGecko free API has limited historical data
+    // Map timeframes to approximate day ranges
+    let days = '1'; // Default: 1 day
+    switch (timeframe.toUpperCase()) {
+      case '1H':
+        days = '1'; // 1 day for hourly
+        break;
+      case '4H':
+        days = '7'; // 7 days for 4H
+        break;
+      case 'D':
+        days = '90'; // 90 days for daily
+        break;
+      case 'W':
+        days = '365'; // 365 days for weekly
+        break;
+      default:
+        days = '7';
+    }
+
+    const url = `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc`;
     const params = {
-      symbol: symbol.toUpperCase(),
-      interval: interval,
-      limit: Math.min(limit, 1000) // Binance max is 1000
+      vs_currency: 'usd',
+      days: days
     };
 
     const response = await axios.get(url, { params });
 
-    // Binance returns array of arrays: [openTime, open, high, low, close, volume, closeTime, ...]
-    const candles = response.data.map((k) => ({
-      symbol: symbol.toUpperCase(),
+    // CoinGecko returns array of [timestamp, open, high, low, close]
+    // Filter to get roughly the requested limit
+    let candlesData = response.data || [];
+    if (candlesData.length > limit) {
+      candlesData = candlesData.slice(-limit); // Get last N candles
+    }
+
+    const candles = candlesData.map((k) => ({
+      symbol: upperSymbol,
       timeframe: timeframe.toUpperCase(),
       timestamp: new Date(parseInt(k[0])),
       open: parseFloat(k[1]),
       high: parseFloat(k[2]),
       low: parseFloat(k[3]),
       close: parseFloat(k[4]),
-      volume: parseFloat(k[5])
+      volume: 0 // CoinGecko free API doesn't provide volume in OHLC endpoint
     }));
 
     return candles;
   } catch (error) {
-    console.error(`[Binance] Error fetching ${symbol} ${timeframe}:`, error.message);
-    throw new Error(`Binance fetch failed: ${error.message}`);
+    console.error(`[CoinGecko] Error fetching ${symbol} ${timeframe}:`, error.message);
+    throw new Error(`CoinGecko fetch failed: ${error.message}`);
   }
 }
 
@@ -168,9 +208,9 @@ export async function fetchFinnhubCandles(symbol, timeframe, count = 100) {
 export async function fetchLiveCandles(symbol, timeframe, limit = 100) {
   const upperSymbol = symbol.toUpperCase();
 
-  // Route to appropriate API
+  // Route to appropriate API (CoinGecko for crypto, Finnhub for metals)
   if (CRYPTO_SYMBOLS.has(upperSymbol)) {
-    return fetchBinanceKlines(symbol, timeframe, limit);
+    return fetchCoinGeckoCandles(symbol, timeframe, limit);
   } else if (FINNHUB_SYMBOL_MAP[upperSymbol]) {
     return fetchFinnhubCandles(symbol, timeframe, limit);
   } else {
@@ -213,7 +253,7 @@ export async function saveCandles(candles, prismaClient = prisma) {
  */
 export async function fetchAndSaveCandles(symbol, timeframe, limit = 100) {
   const upperSymbol = symbol.toUpperCase();
-  const source = CRYPTO_SYMBOLS.has(upperSymbol) ? 'binance' : 'finnhub';
+  const source = CRYPTO_SYMBOLS.has(upperSymbol) ? 'coingecko' : 'finnhub';
 
   // Fetch from appropriate source
   const candles = await fetchLiveCandles(symbol, timeframe, limit);
