@@ -7,6 +7,10 @@ import 'express-async-errors';
 import marketDataRoutes from './src/routes/marketData.js';
 import analysisRoutes from './src/routes/analysis.js';
 import signalsRoutes from './src/routes/signals.js';
+import webhookRoutes from './src/routes/webhook.js';
+
+// Services
+import { startScheduler } from './src/services/scheduler.service.js';
 
 dotenv.config();
 
@@ -31,6 +35,7 @@ app.get('/health', (req, res) => {
 app.use('/api/market-data', marketDataRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/signals', signalsRoutes);
+app.use('/api/webhook', webhookRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -63,4 +68,7 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 ICT Trading API running on http://localhost:${PORT}`);
   console.log(`📊 Frontend: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+
+  // Start the data fetch scheduler
+  startScheduler();
 });

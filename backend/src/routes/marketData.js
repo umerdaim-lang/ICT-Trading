@@ -1,5 +1,6 @@
 import express from 'express';
 import prisma from '../utils/db.js';
+import { fetchLiveCandles } from '../services/dataFetch.service.js';
 
 const router = express.Router();
 
@@ -35,29 +36,18 @@ router.post('/upload', async (req, res) => {
       };
     });
 
-    // Create or update market data
-    const created = [];
-    for (const candle of validData) {
-      const result = await prisma.marketData.upsert({
-        where: {
-          symbol_timeframe_timestamp: {
-            symbol: candle.symbol,
-            timeframe: candle.timeframe,
-            timestamp: candle.timestamp
-          }
-        },
-        update: candle,
-        create: candle
-      });
-      created.push(result);
-    }
+    // Create or update market data (bulk insert with skipDuplicates)
+    const result = await prisma.marketData.createMany({
+      data: validData,
+      skipDuplicates: true // Ignore unique constraint violations
+    });
 
     res.json({
       success: true,
       data: {
         symbol,
         timeframe,
-        candlesUploaded: created.length
+        candlesUploaded: result.count
       }
     });
   } catch (error) {
@@ -66,6 +56,59 @@ router.post('/upload', async (req, res) => {
       success: false,
       error: {
         code: 'UPLOAD_ERROR',
+        message: error.message
+      }
+    });
+  }
+});
+
+// GET: Fetch live market data from Binance or Finnhub
+router.get('/live/:symbol/:timeframe', async (req, res) => {
+  try {
+    const { symbol, timeframe } = req.params;
+    const { limit = 100 } = req.query;
+
+    if (!symbol || !timeframe) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'symbol and timeframe are required'
+        }
+      });
+    }
+
+    // Clamp limit to max 500
+    const parsedLimit = Math.min(parseInt(limit) || 100, 500);
+
+    // Fetch live candles from appropriate data source
+    const candles = await fetchLiveCandles(symbol, timeframe, parsedLimit);
+
+    // Save to database
+    const result = await prisma.marketData.createMany({
+      data: candles,
+      skipDuplicates: true
+    });
+
+    // Determine source
+    const source = symbol.toUpperCase().includes('USDT') || symbol.toUpperCase().match(/^(BTC|ETH|BNB|SOL|XRP|ADA|DOGE|AVAX|MATIC|LINK)USDT/) ? 'binance' : 'finnhub';
+
+    res.json({
+      success: true,
+      data: {
+        symbol: symbol.toUpperCase(),
+        timeframe: timeframe.toUpperCase(),
+        source,
+        candlesFetched: candles.length,
+        candlesSaved: result.count
+      }
+    });
+  } catch (error) {
+    console.error('Live fetch error:', error);
+    res.status(error.message.includes('Unknown symbol') ? 400 : 502).json({
+      success: false,
+      error: {
+        code: error.message.includes('Unknown symbol') ? 'INVALID_SYMBOL' : 'FETCH_ERROR',
         message: error.message
       }
     });

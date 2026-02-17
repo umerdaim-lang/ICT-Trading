@@ -17,6 +17,9 @@ export const marketDataApi = {
   get: (symbol, timeframe, limit = 100) =>
     api.get(`/api/market-data/${symbol}/${timeframe}`, { params: { limit } }),
 
+  fetchLive: (symbol, timeframe, limit = 100) =>
+    api.get(`/api/market-data/live/${symbol}/${timeframe}`, { params: { limit } }),
+
   delete: (symbol) =>
     api.delete(`/api/market-data/${symbol}`)
 };
@@ -52,6 +55,12 @@ export const signalsApi = {
 
   delete: (id) =>
     api.delete(`/api/signals/${id}`)
+};
+
+// Webhook API
+export const webhookApi = {
+  status: () =>
+    api.get('/api/webhook/status')
 };
 
 export default api;

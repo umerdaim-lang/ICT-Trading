@@ -11,6 +11,12 @@ export const useTradingStore = create((set) => ({
   loading: false,
   error: null,
 
+  // Live data state
+  liveDataEnabled: false,
+  liveDataSource: null, // 'binance' | 'finnhub' | null
+  lastLiveFetch: null, // ISO string timestamp
+  webhookLastReceived: null, // ISO string timestamp
+
   // Actions
   setSymbol: (symbol) => set({ symbol }),
   setTimeframe: (timeframe) => set({ timeframe }),
@@ -20,6 +26,12 @@ export const useTradingStore = create((set) => ({
   setActiveSignals: (signals) => set({ activeSignals: signals }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
+
+  // Live data actions
+  setLiveDataEnabled: (enabled) => set({ liveDataEnabled: enabled }),
+  setLiveDataSource: (source) => set({ liveDataSource: source }),
+  setLastLiveFetch: (ts) => set({ lastLiveFetch: ts }),
+  setWebhookLastReceived: (ts) => set({ webhookLastReceived: ts }),
 
   // Combined actions
   loadMarketData: async (symbol, timeframe) => {

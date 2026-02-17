@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { marketDataApi, analysisApi, signalsApi } from './lib/api';
+import { useState, useEffect, useRef } from 'react';
+import { marketDataApi, analysisApi, signalsApi, webhookApi } from './lib/api';
 import { useTradingStore } from './store/tradingStore';
 import DashboardPage from './pages/DashboardPage';
 import './index.css';
@@ -12,15 +12,71 @@ function App() {
     setAnalysis,
     setActiveSignals,
     setLoading,
-    setError
+    setError,
+    liveDataEnabled,
+    liveDataSource,
+    lastLiveFetch,
+    webhookLastReceived,
+    setLiveDataEnabled,
+    setLiveDataSource,
+    setLastLiveFetch,
+    setWebhookLastReceived
   } = useTradingStore();
 
   const [chartData, setChartData] = useState([]);
   const [analysisData, setAnalysisData] = useState(null);
+  const livePollingRef = useRef(null);
 
   useEffect(() => {
     loadData();
   }, [symbol, timeframe]);
+
+  // Auto-refresh polling when live data is enabled (60 seconds)
+  useEffect(() => {
+    if (!liveDataEnabled) {
+      if (livePollingRef.current) {
+        clearInterval(livePollingRef.current);
+        livePollingRef.current = null;
+      }
+      return;
+    }
+
+    const intervalId = setInterval(async () => {
+      try {
+        await marketDataApi.fetchLive(symbol, timeframe, 20); // Only last 20 for refresh
+        setLastLiveFetch(new Date().toISOString());
+        await loadData();
+      } catch (err) {
+        console.warn('[AutoRefresh] Failed:', err.message);
+        // Do not set error state for background polling failures
+      }
+    }, 60000); // 60 seconds
+
+    livePollingRef.current = intervalId;
+
+    return () => {
+      if (livePollingRef.current) {
+        clearInterval(livePollingRef.current);
+      }
+    };
+  }, [liveDataEnabled, symbol, timeframe]);
+
+  // Webhook status polling (30 seconds)
+  useEffect(() => {
+    const intervalId = setInterval(async () => {
+      try {
+        const res = await webhookApi.status();
+        if (res.data.data?.lastReceivedAt) {
+          setWebhookLastReceived(res.data.data.lastReceivedAt);
+        }
+      } catch (err) {
+        // Silent fail - webhook status is non-critical
+        console.debug('[WebhookStatus] Failed:', err.message);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -108,6 +164,25 @@ function App() {
     }
   };
 
+  const handleFetchLive = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await marketDataApi.fetchLive(symbol, timeframe, 100);
+      const { source, candlesFetched } = res.data.data;
+      setLiveDataSource(source);
+      setLastLiveFetch(new Date().toISOString());
+      setLiveDataEnabled(true);
+      // Reload chart data after saving
+      await loadData();
+      setLoading(false);
+    } catch (error) {
+      console.error('Live fetch error:', error);
+      setError(`Live fetch failed: ${error.response?.data?.error?.message || error.message}`);
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
       <DashboardPage
@@ -115,6 +190,13 @@ function App() {
         analysisData={analysisData}
         onRunAnalysis={handleRunAnalysis}
         onUploadData={handleUploadData}
+        onFetchLive={handleFetchLive}
+        liveStatus={{
+          enabled: liveDataEnabled,
+          source: liveDataSource,
+          lastFetch: lastLiveFetch,
+          webhookLastReceived
+        }}
       />
     </div>
   );

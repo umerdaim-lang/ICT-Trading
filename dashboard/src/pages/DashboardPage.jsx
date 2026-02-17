@@ -4,11 +4,24 @@ import ChartComponent from '../components/Chart';
 import SignalPanel from '../components/SignalPanel';
 import AnalysisLog from '../components/AnalysisLog';
 
+const POPULAR_SYMBOLS = [
+  { value: 'BTCUSDT', label: 'BTC/USDT' },
+  { value: 'ETHUSDT', label: 'ETH/USDT' },
+  { value: 'BNBUSDT', label: 'BNB/USDT' },
+  { value: 'SOLUSDT', label: 'SOL/USDT' },
+  { value: 'XRPUSDT', label: 'XRP/USDT' },
+  { value: 'XAUUSD', label: 'XAU/USD (Gold)' },
+  { value: 'XAGUSD', label: 'XAG/USD (Silver)' },
+  { value: 'OTHER', label: 'Other (type symbol)' }
+];
+
 export default function DashboardPage({
   chartData,
   analysisData,
   onRunAnalysis,
-  onUploadData
+  onUploadData,
+  onFetchLive,
+  liveStatus = {}
 }) {
   const {
     symbol,
@@ -22,6 +35,8 @@ export default function DashboardPage({
 
   const [uploadMode, setUploadMode] = useState(false);
   const [csvInput, setCsvInput] = useState('');
+  const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
+  const [showCustomSymbol, setShowCustomSymbol] = useState(false);
 
   const handleUpload = async () => {
     if (!csvInput.trim()) {
@@ -31,6 +46,17 @@ export default function DashboardPage({
     await onUploadData(csvInput);
     setCsvInput('');
     setUploadMode(false);
+  };
+
+  const handleSymbolChange = (e) => {
+    const value = e.target.value;
+    setSelectedSymbol(value);
+    if (value === 'OTHER') {
+      setShowCustomSymbol(true);
+    } else {
+      setShowCustomSymbol(false);
+      setSymbol(value);
+    }
   };
 
   return (
@@ -54,18 +80,58 @@ export default function DashboardPage({
         </div>
       )}
 
+      {/* Webhook/Live Data Status Indicator */}
+      {(liveStatus?.enabled || liveStatus?.lastFetch) && (
+        <div className="mb-4 flex items-center gap-6 p-3 bg-slate-800/50 border border-slate-700 rounded-lg text-sm">
+          {/* Live data indicator */}
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${liveStatus?.enabled ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'}`} />
+            <span className="text-gray-300">Live Data</span>
+            {liveStatus?.source && (
+              <span className="text-gray-500 text-xs">({liveStatus.source})</span>
+            )}
+          </div>
+          {/* Last fetch time */}
+          {liveStatus?.lastFetch && (
+            <div className="text-gray-400">
+              Last fetch: <span className="text-gray-200">{new Date(liveStatus.lastFetch).toLocaleTimeString()}</span>
+            </div>
+          )}
+          {/* Webhook indicator */}
+          {liveStatus?.webhookLastReceived && (
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-400" />
+              <span className="text-gray-300">Webhook: <span className="text-gray-200">{new Date(liveStatus.webhookLastReceived).toLocaleTimeString()}</span></span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        {/* Symbol Input */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        {/* Symbol Selector */}
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">Symbol</label>
-          <input
-            type="text"
-            value={symbol}
-            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-            placeholder="EURUSD"
-            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-          />
+          <select
+            value={selectedSymbol}
+            onChange={handleSymbolChange}
+            className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+          >
+            {POPULAR_SYMBOLS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          {showCustomSymbol && (
+            <input
+              type="text"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+              placeholder="Enter symbol"
+              className="w-full px-4 py-2 mt-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+            />
+          )}
         </div>
 
         {/* Timeframe Select */}
@@ -94,13 +160,24 @@ export default function DashboardPage({
           </button>
         </div>
 
+        {/* Fetch Live Data Button */}
+        <div className="flex items-end">
+          <button
+            onClick={onFetchLive}
+            disabled={loading}
+            className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+          >
+            {loading ? 'Fetching...' : 'Fetch Live'}
+          </button>
+        </div>
+
         {/* Upload Data Button */}
         <div className="flex items-end">
           <button
             onClick={() => setUploadMode(!uploadMode)}
             className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
           >
-            {uploadMode ? 'Cancel' : 'Upload Data'}
+            {uploadMode ? 'Cancel' : 'Upload'}
           </button>
         </div>
       </div>
