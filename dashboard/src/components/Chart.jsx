@@ -8,18 +8,14 @@ export default function ChartComponent({ data, analysis, loading }) {
   useEffect(() => {
     if (!chartContainerRef.current || data.length === 0) return;
 
-    // Create chart
     const chart = createChart(chartContainerRef.current, {
       layout: {
         textColor: '#d1d5db',
         background: { type: 'solid', color: '#1e293b' }
       },
-      timeScale: {
-        timeVisible: true,
-        secondsVisible: false,
-      },
+      timeScale: { timeVisible: true, secondsVisible: false },
       width: chartContainerRef.current.clientWidth,
-      height: 400,
+      height: 500,
     });
 
     const candlestickSeries = chart.addCandlestickSeries({
@@ -31,43 +27,118 @@ export default function ChartComponent({ data, analysis, loading }) {
       wickDownColor: '#ef4444',
     });
 
-    // Format candle data
     const formattedData = data.map(candle => ({
       time: new Date(candle.timestamp).getTime() / 1000,
       open: parseFloat(candle.open),
       high: parseFloat(candle.high),
       low: parseFloat(candle.low),
       close: parseFloat(candle.close)
-    }));
+    })).sort((a, b) => a.time - b.time);
 
     candlestickSeries.setData(formattedData);
 
-    // Add order block overlays if analysis exists
+    // --- Order Block Zones: two price lines per block (top and bottom) ---
     if (analysis?.orderBlocks && analysis.orderBlocks.length > 0) {
-      const orderBlockSeries = chart.addLineSeries({
-        color: 'rgba(59, 130, 246, 0.3)',
-        visible: false
-      });
+      analysis.orderBlocks.slice(-8).forEach((block, idx) => {
+        const isBullish = block.type === 'bullish';
+        const color = isBullish ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)';
+        const label = isBullish ? `OB Bull` : `OB Bear`;
 
-      analysis.orderBlocks.forEach(block => {
-        // Add markers or shapes for order blocks (basic implementation)
+        // Top line of the OB zone
+        candlestickSeries.createPriceLine({
+          price: parseFloat(block.high),
+          color,
+          lineWidth: 1,
+          lineStyle: 2,  // Dashed
+          axisLabelVisible: false,
+          title: label,
+        });
+
+        // Bottom line of the OB zone
+        candlestickSeries.createPriceLine({
+          price: parseFloat(block.low),
+          color,
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: false,
+          title: '',
+        });
       });
     }
 
-    // Fit content
-    chart.timeScale().fitContent();
+    // --- FVG Zones: two price lines per gap ---
+    if (analysis?.fairValueGaps && analysis.fairValueGaps.length > 0) {
+      analysis.fairValueGaps.slice(-6).forEach((fvg) => {
+        const isBullish = fvg.type === 'bullish';
+        const color = isBullish ? 'rgba(59, 130, 246, 0.7)' : 'rgba(168, 85, 247, 0.7)';
+        const label = isBullish ? 'FVG Bull' : 'FVG Bear';
 
+        candlestickSeries.createPriceLine({
+          price: parseFloat(fvg.top),
+          color,
+          lineWidth: 1,
+          lineStyle: 3,  // Dotted
+          axisLabelVisible: false,
+          title: label,
+        });
+        candlestickSeries.createPriceLine({
+          price: parseFloat(fvg.bottom),
+          color,
+          lineWidth: 1,
+          lineStyle: 3,
+          axisLabelVisible: false,
+          title: '',
+        });
+      });
+    }
+
+    // --- Swing High/Low Markers ---
+    if (analysis?.liquidityLevels) {
+      const markers = [];
+
+      (analysis.liquidityLevels.highs || []).slice(-5).forEach(sh => {
+        const time = new Date(sh.timestamp).getTime() / 1000;
+        if (!isNaN(time)) {
+          markers.push({
+            time,
+            position: 'aboveBar',
+            color: '#f59e0b',
+            shape: 'arrowDown',
+            text: 'SH',
+            size: 1
+          });
+        }
+      });
+
+      (analysis.liquidityLevels.lows || []).slice(-5).forEach(sl => {
+        const time = new Date(sl.timestamp).getTime() / 1000;
+        if (!isNaN(time)) {
+          markers.push({
+            time,
+            position: 'belowBar',
+            color: '#06b6d4',
+            shape: 'arrowUp',
+            text: 'SL',
+            size: 1
+          });
+        }
+      });
+
+      // setMarkers requires markers sorted by time
+      markers.sort((a, b) => a.time - b.time);
+      if (markers.length > 0) {
+        candlestickSeries.setMarkers(markers);
+      }
+    }
+
+    chart.timeScale().fitContent();
     chartRef.current = chart;
 
-    // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current) {
-        chart.applyOptions({
-          width: chartContainerRef.current.clientWidth
-        });
+        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
       }
     };
-
     window.addEventListener('resize', handleResize);
 
     return () => {
@@ -78,7 +149,7 @@ export default function ChartComponent({ data, analysis, loading }) {
 
   if (loading) {
     return (
-      <div className="w-full h-96 bg-slate-700/50 rounded-lg flex items-center justify-center">
+      <div className="w-full h-[500px] bg-slate-700/50 rounded-lg flex items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
           <p className="text-gray-400">Loading chart...</p>
@@ -89,10 +160,10 @@ export default function ChartComponent({ data, analysis, loading }) {
 
   if (data.length === 0) {
     return (
-      <div className="w-full h-96 bg-slate-700/50 rounded-lg flex items-center justify-center">
+      <div className="w-full h-[500px] bg-slate-700/50 rounded-lg flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400">No market data loaded</p>
-          <p className="text-gray-500 text-sm mt-2">Upload market data to view chart</p>
+          <p className="text-gray-500 text-sm mt-2">Upload market data or Fetch Live to view chart</p>
         </div>
       </div>
     );
@@ -101,7 +172,7 @@ export default function ChartComponent({ data, analysis, loading }) {
   return (
     <div
       ref={chartContainerRef}
-      className="w-full h-96 rounded-lg overflow-hidden"
+      className="w-full h-[500px] rounded-lg overflow-hidden"
     />
   );
 }
