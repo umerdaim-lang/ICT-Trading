@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react';
 import { signalsApi } from '../lib/api';
+import { useTradingStore } from '../store/tradingStore';
 
 export default function SignalPanel({ analysisData, loading }) {
   const [signals, setSignals] = useState([]);
   const [loadingSignals, setLoadingSignals] = useState(false);
+  const symbol = useTradingStore(state => state.symbol);
 
   useEffect(() => {
-    if (analysisData) {
+    if (analysisData && symbol) {
       loadSignals();
     }
-  }, [analysisData]);
+  }, [analysisData, symbol]);
 
   const loadSignals = async () => {
     setLoadingSignals(true);
     try {
-      const res = await signalsApi.getActive();
-      setSignals(res.data.data.signals || []);
+      const res = await signalsApi.getBySymbol(symbol, 'ACTIVE');
+      setSignals(res.data.data || []);
     } catch (error) {
       console.error('Failed to load signals:', error);
     }
@@ -44,7 +46,9 @@ export default function SignalPanel({ analysisData, loading }) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-white mb-4">Active Signals</h2>
+      <h2 className="text-xl font-bold text-white mb-4">
+        Active Signals {symbol && `— ${symbol}`}
+      </h2>
 
       {signals.length === 0 ? (
         <div className="text-center py-8">

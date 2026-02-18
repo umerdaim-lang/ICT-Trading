@@ -107,6 +107,64 @@ export default function AnalysisLog({ analysis }) {
         </Section>
       )}
 
+      {/* Market Structure Shifts */}
+      {analysis.marketStructureShift && analysis.marketStructureShift.length > 0 && (
+        <Section title={`Market Structure Shifts (${analysis.marketStructureShift.length})`} id="mss">
+          <div className="space-y-2">
+            {analysis.marketStructureShift.slice(-4).map((mss, idx) => (
+              <div key={idx} className="bg-slate-900/50 p-2 rounded">
+                <p className="font-semibold">
+                  <span className={`px-2 py-1 rounded text-xs mr-2 ${
+                    mss.type === 'bullish' ? 'bg-green-900/50 text-green-300' : 'bg-red-900/50 text-red-300'
+                  }`}>
+                    {mss.type.toUpperCase()}
+                  </span>
+                </p>
+                <p className="text-xs">Break Level: {parseFloat(mss.breakLevel).toFixed(5)}</p>
+                <p className="text-xs text-gray-500">{mss.description}</p>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Liquidity Levels */}
+      {analysis.liquidityLevels && (
+        <Section title="Liquidity Levels" id="liquidity">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Swing Highs */}
+            <div>
+              <h4 className="text-xs text-gray-500 font-semibold mb-2">Swing Highs (BSL)</h4>
+              <div className="space-y-1">
+                {analysis.liquidityLevels.highs && analysis.liquidityLevels.highs.slice(-3).map((high, idx) => (
+                  <div key={idx} className="bg-slate-900/50 p-2 rounded text-xs">
+                    <p className="text-amber-400 font-mono">{parseFloat(high.price).toFixed(5)}</p>
+                  </div>
+                ))}
+                {!analysis.liquidityLevels.highs || analysis.liquidityLevels.highs.length === 0 && (
+                  <p className="text-gray-500 text-xs">No swing highs</p>
+                )}
+              </div>
+            </div>
+
+            {/* Swing Lows */}
+            <div>
+              <h4 className="text-xs text-gray-500 font-semibold mb-2">Swing Lows (SSL)</h4>
+              <div className="space-y-1">
+                {analysis.liquidityLevels.lows && analysis.liquidityLevels.lows.slice(-3).map((low, idx) => (
+                  <div key={idx} className="bg-slate-900/50 p-2 rounded text-xs">
+                    <p className="text-cyan-400 font-mono">{parseFloat(low.price).toFixed(5)}</p>
+                  </div>
+                ))}
+                {!analysis.liquidityLevels.lows || analysis.liquidityLevels.lows.length === 0 && (
+                  <p className="text-gray-500 text-xs">No swing lows</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </Section>
+      )}
+
       {/* Claude Analysis */}
       {analysis.claudeAnalysis && (
         <Section title="Claude AI Analysis" id="claude">
