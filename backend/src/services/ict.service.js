@@ -167,6 +167,105 @@ export const identifyMarketStructureShift = (candles, swingPoints) => {
   return mss;
 };
 
+export const identifySupplyDemandZones = (candles) => {
+  const zones = [];
+  const avgBody = calculateAverageBody(candles.slice(-20));
+
+  let i = 1;
+  while (i < candles.length - 2) {
+    const c = candles[i];
+    const body = Math.abs(parseFloat(c.close) - parseFloat(c.open));
+
+    // Small consolidation candle (base candle)
+    if (body < avgBody * 0.6) {
+      // Collect the cluster of base candles
+      let clusterStart = i;
+      let clusterHigh = parseFloat(c.high);
+      let clusterLow = parseFloat(c.low);
+      let j = i;
+
+      while (j < candles.length - 1) {
+        const nextBody = Math.abs(parseFloat(candles[j].close) - parseFloat(candles[j].open));
+        if (nextBody < avgBody * 0.6) {
+          clusterHigh = Math.max(clusterHigh, parseFloat(candles[j].high));
+          clusterLow = Math.min(clusterLow, parseFloat(candles[j].low));
+          j++;
+        } else {
+          break;
+        }
+      }
+
+      // The candle after the cluster is the "impulse" candle
+      const impulse = candles[j];
+      const avgRange = calculateAverageRange(candles.slice(Math.max(0, i - 10), i));
+      const impulseRange = parseFloat(impulse.high) - parseFloat(impulse.low);
+
+      if (impulseRange > avgRange * 1.5) {
+        const type = parseFloat(impulse.close) > parseFloat(impulse.open) ? 'demand' : 'supply';
+        zones.push({
+          type,
+          high: clusterHigh,
+          low: clusterLow,
+          startTimestamp: candles[clusterStart].timestamp,
+          endTimestamp: candles[j].timestamp,
+          strength: impulseRange / avgRange
+        });
+      }
+      i = j + 1;
+    } else {
+      i++;
+    }
+  }
+  return zones;
+};
+
+export const identifyBreakerBlocks = (candles, orderBlocks) => {
+  const breakerBlocks = [];
+
+  for (const block of orderBlocks) {
+    // Find candles after this order block's timestamp
+    const blockTime = new Date(block.timestamp).getTime();
+    const subsequentCandles = candles.filter(
+      c => new Date(c.timestamp).getTime() > blockTime
+    );
+
+    let broken = false;
+    let brokenAt = null;
+
+    for (const candle of subsequentCandles) {
+      const candleClose = parseFloat(candle.close);
+      if (block.type === 'bullish') {
+        // Bullish OB is broken when price closes below its low
+        if (candleClose < block.low) {
+          broken = true;
+          brokenAt = candle.timestamp;
+          break;
+        }
+      } else if (block.type === 'bearish') {
+        // Bearish OB is broken when price closes above its high
+        if (candleClose > block.high) {
+          broken = true;
+          brokenAt = candle.timestamp;
+          break;
+        }
+      }
+    }
+
+    if (broken) {
+      // A breaker block becomes a reversal zone in the opposite direction
+      breakerBlocks.push({
+        type: block.type === 'bullish' ? 'bearish_breaker' : 'bullish_breaker',
+        high: block.high,
+        low: block.low,
+        originalTimestamp: block.timestamp,
+        brokenAt
+      });
+    }
+  }
+
+  return breakerBlocks;
+};
+
 export const analyzeAllICTConcepts = (candles) => {
   // Convert all prices to numbers for calculations
   const normalizedCandles = candles.map(c => ({
@@ -181,6 +280,8 @@ export const analyzeAllICTConcepts = (candles) => {
   const orderBlocks = identifyOrderBlocks(normalizedCandles);
   const liquidityLevels = identifyLiquidityLevels(normalizedCandles);
   const fvgs = identifyFairValueGaps(normalizedCandles);
+  const supplyDemandZones = identifySupplyDemandZones(normalizedCandles);
+  const breakerBlocks = identifyBreakerBlocks(normalizedCandles, orderBlocks);
 
   // Combine all swing points for MSS analysis
   const allSwingPoints = [
@@ -194,6 +295,8 @@ export const analyzeAllICTConcepts = (candles) => {
     orderBlocks,
     liquidityLevels,
     fvgs,
+    supplyDemandZones,
+    breakerBlocks,
     mss,
     summary: generateSummary(normalizedCandles, orderBlocks, liquidityLevels, fvgs, mss)
   };
@@ -204,6 +307,12 @@ const calculateAverageRange = (candles) => {
   if (candles.length === 0) return 0;
   const ranges = candles.map(c => parseFloat(c.high) - parseFloat(c.low));
   return ranges.reduce((a, b) => a + b, 0) / ranges.length;
+};
+
+const calculateAverageBody = (candles) => {
+  if (candles.length === 0) return 0;
+  const bodies = candles.map(c => Math.abs(parseFloat(c.close) - parseFloat(c.open)));
+  return bodies.reduce((a, b) => a + b, 0) / bodies.length;
 };
 
 const calculateBlockStrength = (currentCandle, nextCandle, type) => {
