@@ -17,7 +17,7 @@ export default function SignalPanel({ analysisData, loading }) {
     setLoadingSignals(true);
     try {
       const res = await signalsApi.getBySymbol(symbol, 'ACTIVE');
-      setSignals(res.data.data || []);
+      setSignals(res.data.signals || []);
     } catch (error) {
       console.error('Failed to load signals:', error);
     }
