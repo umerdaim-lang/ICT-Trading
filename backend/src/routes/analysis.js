@@ -50,7 +50,8 @@ router.post('/run', async (req, res) => {
       {
         symbol: symbol.toUpperCase(),
         timeframe,
-        currentPrice: candles[candles.length - 1].close
+        currentPrice: candles[candles.length - 1].close,
+        timestamp: candles[candles.length - 1].timestamp
       },
       ictResults
     );
@@ -63,6 +64,8 @@ router.post('/run', async (req, res) => {
         orderBlocks: ictResults.orderBlocks,
         liquidityLevels: ictResults.liquidityLevels,
         fairValueGaps: ictResults.fvgs,
+        supplyDemandZones: ictResults.supplyDemandZones,
+        breakerBlocks: ictResults.breakerBlocks,
         marketStructureShift: ictResults.mss,
         claudeAnalysis
       }
@@ -78,6 +81,8 @@ router.post('/run', async (req, res) => {
         orderBlocks: ictResults.orderBlocks,
         liquidityLevels: ictResults.liquidityLevels,
         fairValueGaps: ictResults.fvgs,
+        supplyDemandZones: ictResults.supplyDemandZones,
+        breakerBlocks: ictResults.breakerBlocks,
         marketStructureShift: ictResults.mss,
         claudeAnalysis
       }
