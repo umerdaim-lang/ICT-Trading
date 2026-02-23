@@ -128,7 +128,7 @@ export const identifyMarketStructureShift = (candles, swingPoints) => {
 
   if (swingPoints.length < 3) return mss;
 
-  for (let i = 1; i < swingPoints.length; i++) {
+  for (let i = 2; i < swingPoints.length; i++) {
     const current = swingPoints[i];
     const prev = swingPoints[i - 1];
     const prevPrev = swingPoints[i - 2];
