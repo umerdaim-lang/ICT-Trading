@@ -114,7 +114,7 @@ router.post('/tradingview', async (req, res) => {
       orderBy: {
         timestamp: 'asc'
       },
-      take: 100
+      take: -(100) // Negative take = get last N records
     });
 
     // Step 6: Guard against insufficient data
