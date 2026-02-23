@@ -29,7 +29,7 @@ router.post('/run', async (req, res) => {
       orderBy: {
         timestamp: 'asc'
       },
-      take: lookbackPeriods
+      take: -(lookbackPeriods) // Negative take = get last N records
     });
 
     if (candles.length === 0) {
@@ -43,9 +43,12 @@ router.post('/run', async (req, res) => {
     }
 
     // Run ICT analysis
+    console.log(`[Analysis] Running ICT analysis on ${candles.length} candles for ${symbol} ${timeframe}`);
     const ictResults = analyzeAllICTConcepts(candles);
+    console.log(`[Analysis] ✅ ICT analysis complete. Got ${ictResults.orderBlocks?.length || 0} order blocks`);
 
     // Get Claude analysis
+    console.log(`[Analysis] Calling Claude API for market analysis...`);
     const claudeAnalysis = await analyzeMarketDataWithClaude(
       {
         symbol: symbol.toUpperCase(),
@@ -57,6 +60,7 @@ router.post('/run', async (req, res) => {
     );
 
     // Store analysis in database
+    console.log(`[Analysis] ✅ Claude analysis complete. Storing in database...`);
     const analysis = await prisma.ictAnalysis.create({
       data: {
         symbol: symbol.toUpperCase(),
@@ -88,12 +92,15 @@ router.post('/run', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Analysis error:', error);
+    console.error('[Analysis] ❌ ERROR:', error.message);
+    console.error('[Analysis] Stack:', error.stack);
+    console.error('[Analysis] Full error:', error);
     res.status(500).json({
       success: false,
       error: {
         code: 'ANALYSIS_ERROR',
-        message: error.message
+        message: error.message,
+        details: error.stack
       }
     });
   }
