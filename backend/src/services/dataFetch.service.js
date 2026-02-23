@@ -1,5 +1,4 @@
 import axios from 'axios';
-import crypto from 'crypto';
 import prisma from '../utils/db.js';
 
 // Crypto symbols that use MEXC API (primary) with CoinGecko fallback
@@ -85,13 +84,7 @@ export async function fetchMexcCandles(symbol, timeframe, limit = 100) {
       throw new Error(`Unsupported timeframe: ${timeframe}`);
     }
 
-    const accessKey = process.env.MEXC_ACCESS_KEY || 'mx0vglrLturYEqI0ec';
-    const apiKey = process.env.MEXC_API_KEY || '82d082d1889441b38acbc866ea652412';
-
-    if (!accessKey || !apiKey) {
-      throw new Error('MEXC credentials not available');
-    }
-
+    // MEXC public API - no authentication required
     const url = `https://api.mexc.com/api/v3/klines`;
     const params = {
       symbol: mexcSymbol,
@@ -99,22 +92,7 @@ export async function fetchMexcCandles(symbol, timeframe, limit = 100) {
       limit: Math.min(limit, 1000) // MEXC max 1000 candles per request
     };
 
-    // MEXC requires request signing with HMAC-SHA256
-    const queryString = new URLSearchParams(params).toString();
-    const signature = crypto
-      .createHmac('sha256', apiKey)
-      .update(queryString)
-      .digest('hex');
-
-    const response = await axios.get(url, {
-      params: {
-        ...params,
-        signature
-      },
-      headers: {
-        'X-MEXC-APIKEY': accessKey
-      }
-    });
+    const response = await axios.get(url, { params });
 
     // MEXC returns array of [timestamp, open, high, low, close, volume, ...]
     const candles = (response.data || []).map((k) => ({
