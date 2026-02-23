@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTradingStore } from '../store/tradingStore';
-import TradingViewChart from '../components/TradingViewChart';
+import ChartComponent from '../components/Chart';
 import SignalPanel from '../components/SignalPanel';
 import AnalysisLog from '../components/AnalysisLog';
 
@@ -212,9 +212,9 @@ export default function DashboardPage({
         <div className="lg:col-span-2">
           <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6">
             <h2 className="text-xl font-bold text-white mb-4">{symbol} {timeframe}</h2>
-            <TradingViewChart
-              symbol={symbol}
-              timeframe={timeframe}
+            <ChartComponent
+              data={chartData}
+              analysis={analysisData}
               loading={loading}
             />
           </div>

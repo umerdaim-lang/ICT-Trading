@@ -30,24 +30,35 @@ export default function ChartComponent({ data, analysis, loading }) {
       console.log('[Chart] Creating chart with width:', width, 'height: 600');
       const chart = createChart(chartContainerRef.current, {
         layout: {
-          textColor: '#d1d5db',
+          textColor: '#9ca3af',
           background: { type: 'solid', color: '#1e293b' },
           fontSize: 12,
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto'
         },
+        grid: {
+          vertLines: { visible: false },
+          horzLines: { visible: false }
+        },
         timeScale: {
           timeVisible: true,
           secondsVisible: false,
-          rightOffset: 0,
+          rightOffset: 10,
           fixLeftEdge: false,
-          lockRange: false
+          lockRange: false,
+          borderVisible: false
         },
         rightPriceScale: {
           autoScale: true,
           invertScale: false,
           alignLabels: true,
-          borderVisible: true,
-          borderColor: '#374151'
+          borderVisible: false,
+          scaleMargins: {
+            top: 0.1,
+            bottom: 0.2
+          }
+        },
+        watermark: {
+          visible: false
         },
         width: width,
         height: 600,
