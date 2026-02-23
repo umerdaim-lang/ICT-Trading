@@ -27,15 +27,30 @@ export default function ChartComponent({ data, analysis, loading }) {
     }
 
     try {
-      console.log('[Chart] Creating chart with width:', width, 'height: 500');
+      console.log('[Chart] Creating chart with width:', width, 'height: 600');
       const chart = createChart(chartContainerRef.current, {
         layout: {
           textColor: '#d1d5db',
-          background: { type: 'solid', color: '#1e293b' }
+          background: { type: 'solid', color: '#1e293b' },
+          fontSize: 12,
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto'
         },
-        timeScale: { timeVisible: true, secondsVisible: false },
+        timeScale: {
+          timeVisible: true,
+          secondsVisible: false,
+          rightOffset: 0,
+          fixLeftEdge: false,
+          lockRange: false
+        },
+        rightPriceScale: {
+          autoScale: true,
+          invertScale: false,
+          alignLabels: true,
+          borderVisible: true,
+          borderColor: '#374151'
+        },
         width: width,
-        height: 500,
+        height: 600,
       });
       console.log('[Chart] Chart created successfully');
 
@@ -46,6 +61,8 @@ export default function ChartComponent({ data, analysis, loading }) {
         borderDownColor: '#ef4444',
         wickUpColor: '#10b981',
         wickDownColor: '#ef4444',
+        wickVisible: true,
+        borderVisible: true
       });
       console.log('[Chart] Candlestick series added');
 
@@ -201,7 +218,7 @@ export default function ChartComponent({ data, analysis, loading }) {
   if (loading) {
     console.log('[Chart] Rendering loading state...');
     return (
-      <div className="w-full h-[500px] bg-slate-700/50 rounded-lg flex items-center justify-center">
+      <div className="w-full h-[600px] bg-slate-700/50 rounded-lg flex items-center justify-center">
         <div className="flex flex-col items-center">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-2"></div>
           <p className="text-gray-400">Loading chart...</p>
@@ -213,7 +230,7 @@ export default function ChartComponent({ data, analysis, loading }) {
   if (data.length === 0) {
     console.log('[Chart] Rendering empty state - no data');
     return (
-      <div className="w-full h-[500px] bg-slate-700/50 rounded-lg flex items-center justify-center">
+      <div className="w-full h-[600px] bg-slate-700/50 rounded-lg flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-400">No market data loaded</p>
           <p className="text-gray-500 text-sm mt-2">Upload market data or Fetch Live to view chart</p>
@@ -225,7 +242,7 @@ export default function ChartComponent({ data, analysis, loading }) {
   return (
     <div
       ref={chartContainerRef}
-      className="w-full h-[500px] rounded-lg overflow-hidden"
+      className="w-full h-[600px] rounded-lg overflow-hidden"
     />
   );
 }

@@ -86,7 +86,7 @@ function App() {
 
       // Load market data
       console.log('[App] Fetching market data...');
-      const marketRes = await marketDataApi.get(symbol, timeframe, 100);
+      const marketRes = await marketDataApi.get(symbol, timeframe, 50);
       const candles = marketRes.data.data.candles || [];
       console.log('[App] ✅ Loaded', candles.length, 'candles');
       console.log('[App] First candle:', candles[0]);
@@ -192,7 +192,7 @@ function App() {
       setLoading(true);
       setError(null);
       console.log('[App] Fetching live data from API...');
-      const res = await marketDataApi.fetchLive(symbol, timeframe, 100);
+      const res = await marketDataApi.fetchLive(symbol, timeframe, 50);
       console.log('[App] ✅ Live fetch response:', res.data.data);
       const { source, candlesFetched } = res.data.data;
       console.log('[App] Source:', source, 'Fetched:', candlesFetched, 'candles');
