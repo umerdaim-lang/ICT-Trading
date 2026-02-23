@@ -196,7 +196,7 @@ export default function ChartComponent({ data, analysis, loading }) {
       console.error('[Chart] Error name:', error.name);
       console.error('[Chart] Error message:', error.message);
     }
-  }, [data, analysis]);
+  }, [data, analysis, loading]);
 
   if (loading) {
     console.log('[Chart] Rendering loading state...');
