@@ -1,11 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function TradingViewChart({ symbol, timeframe, loading }) {
   const containerRef = useRef(null);
-  const scriptRef = useRef(null);
+  const [widgetLoaded, setWidgetLoaded] = useState(false);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      console.warn('[TradingViewChart] Container ref not available');
+      return;
+    }
 
     console.log(`[TradingViewChart] Loading ${symbol} ${timeframe}`);
 
@@ -19,18 +22,19 @@ export default function TradingViewChart({ symbol, timeframe, loading }) {
 
     const tvTimeframe = timeframeMap[timeframe] || '240';
 
-    // Clear existing content
-    containerRef.current.innerHTML = '';
+    // Function to create widget
+    const createWidget = () => {
+      if (!window.TradingView) {
+        console.error('[TradingViewChart] TradingView not available');
+        return;
+      }
 
-    // Create the TradingView widget script
-    const script = document.createElement('script');
-    script.src = 'https://s3.tradingview.com/tv.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('[TradingViewChart] TradingView script loaded');
+      console.log('[TradingViewChart] Creating widget for', symbol);
 
-      if (window.TradingView) {
-        console.log('[TradingViewChart] Creating widget for', symbol);
+      // Clear container
+      containerRef.current.innerHTML = '<div id="tradingview-widget"></div>';
+
+      try {
         new window.TradingView.widget({
           autosize: true,
           symbol: `BINANCE:${symbol}`,
@@ -46,22 +50,34 @@ export default function TradingViewChart({ symbol, timeframe, loading }) {
           container_id: 'tradingview-widget'
         });
         console.log('[TradingViewChart] ✅ Widget created successfully');
+        setWidgetLoaded(true);
+      } catch (error) {
+        console.error('[TradingViewChart] Error creating widget:', error);
       }
     };
 
-    if (containerRef.current) {
-      containerRef.current.appendChild(script);
-      scriptRef.current = script;
+    // Check if TradingView script is already loaded
+    if (window.TradingView) {
+      console.log('[TradingViewChart] TradingView already loaded');
+      createWidget();
+    } else {
+      // Load the TradingView script
+      console.log('[TradingViewChart] Loading TradingView script');
+      const script = document.createElement('script');
+      script.src = 'https://s3.tradingview.com/tv.js';
+      script.async = true;
+      script.onload = () => {
+        console.log('[TradingViewChart] TradingView script loaded');
+        createWidget();
+      };
+      script.onerror = () => {
+        console.error('[TradingViewChart] Failed to load TradingView script');
+      };
+      document.body.appendChild(script);
     }
 
     return () => {
-      if (scriptRef.current && containerRef.current) {
-        try {
-          containerRef.current.removeChild(scriptRef.current);
-        } catch (e) {
-          console.warn('[TradingViewChart] Error cleaning up script:', e);
-        }
-      }
+      setWidgetLoaded(false);
     };
   }, [symbol, timeframe]);
 
