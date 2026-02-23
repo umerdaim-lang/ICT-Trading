@@ -1,5 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+if (!process.env.ANTHROPIC_API_KEY) {
+  console.error('[Claude Service] ❌ ANTHROPIC_API_KEY environment variable is not set');
+  console.error('[Claude Service] Analysis will fail. Please set ANTHROPIC_API_KEY on Render.');
+}
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
 });
