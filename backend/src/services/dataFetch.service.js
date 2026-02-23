@@ -1,4 +1,5 @@
 import axios from 'axios';
+import crypto from 'crypto';
 import prisma from '../utils/db.js';
 
 // Crypto symbols that use MEXC API (primary) with CoinGecko fallback
@@ -98,8 +99,18 @@ export async function fetchMexcCandles(symbol, timeframe, limit = 100) {
       limit: Math.min(limit, 1000) // MEXC max 1000 candles per request
     };
 
+    // MEXC requires request signing with HMAC-SHA256
+    const queryString = new URLSearchParams(params).toString();
+    const signature = crypto
+      .createHmac('sha256', apiKey)
+      .update(queryString)
+      .digest('hex');
+
     const response = await axios.get(url, {
-      params,
+      params: {
+        ...params,
+        signature
+      },
       headers: {
         'X-MEXC-APIKEY': accessKey
       }
