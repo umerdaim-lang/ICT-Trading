@@ -129,7 +129,7 @@ router.get('/:symbol/:timeframe', async (req, res) => {
       orderBy: {
         timestamp: 'asc'
       },
-      take: parseInt(limit) || 100
+      take: -(parseInt(limit) || 100) // Negative take = get last N records
     });
 
     res.json({
