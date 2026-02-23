@@ -14,12 +14,20 @@ let webhooksProcessed = 0;
 
 // TradingView interval to internal timeframe mapping
 const INTERVAL_MAP = {
+  '1': '1m',
+  '5': '5m',
+  '15': '15m',
+  '30': '30m',
   '60': '1H',
   '240': '4H',
   'D': 'D',
   '1D': 'D',
   'W': 'W',
-  '1W': 'W'
+  '1W': 'W',
+  'M': 'M',
+  '1M': 'M',
+  'Y': 'Y',
+  '12M': 'Y'
 };
 
 /**
@@ -76,7 +84,7 @@ router.post('/tradingview', async (req, res) => {
         success: false,
         error: {
           code: 'INVALID_TIMEFRAME',
-          message: `Unknown timeframe: ${timeframe}. Supported: 60, 240, D, W`
+          message: `Unknown timeframe: ${timeframe}. Supported: 1, 5, 15, 30, 60, 240, D, 1D, W, 1W, M, 1M, Y, 12M`
         }
       });
     }

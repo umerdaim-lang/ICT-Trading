@@ -143,10 +143,19 @@ export default function DashboardPage({
             onChange={(e) => setTimeframe(e.target.value)}
             className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
           >
+            {/* Intraday */}
+            <option>1m</option>
+            <option>5m</option>
+            <option>15m</option>
+            <option>30m</option>
+            {/* Daily/Weekly */}
             <option>1H</option>
             <option>4H</option>
             <option>D</option>
             <option>W</option>
+            {/* Monthly/Yearly */}
+            <option>M</option>
+            <option>Y</option>
           </select>
         </div>
 

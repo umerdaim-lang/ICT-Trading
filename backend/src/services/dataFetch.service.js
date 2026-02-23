@@ -35,19 +35,44 @@ const COINGECKO_SYMBOL_MAP = {
   'LINKUSDT': 'chainlink'
 };
 
-// Timeframe mapping
+// Timeframe mapping for various APIs
 const TIMEFRAME_MAP = {
-  binance: {
+  mexc: {
+    '1m': '1m',
+    '5m': '5m',
+    '15m': '15m',
+    '30m': '30m',
     '1H': '1h',
     '4H': '4h',
     'D': '1d',
-    'W': '1w'
+    'W': '1w',
+    'M': '1M',
+    'Y': '1y'
+  },
+  coingecko: {
+    // CoinGecko only has daily OHLC, so we map all to daily
+    '1m': 'daily',
+    '5m': 'daily',
+    '15m': 'daily',
+    '30m': 'daily',
+    '1H': 'daily',
+    '4H': 'daily',
+    'D': 'daily',
+    'W': 'daily',
+    'M': 'daily',
+    'Y': 'daily'
   },
   finnhub: {
+    '1m': '1',
+    '5m': '5',
+    '15m': '15',
+    '30m': '30',
     '1H': '60',
     '4H': '240',
     'D': 'D',
-    'W': 'W'
+    'W': 'W',
+    'M': 'M',
+    'Y': 'Y'
   }
 };
 
@@ -73,15 +98,10 @@ export async function fetchMexcCandles(symbol, timeframe, limit = 100) {
     }
 
     // Map timeframes to MEXC interval values
-    const mexcTimeframe = {
-      '1H': '1h',
-      '4H': '4h',
-      'D': '1d',
-      'W': '1w'
-    }[timeframe.toUpperCase()];
+    const mexcTimeframe = TIMEFRAME_MAP.mexc[timeframe.toUpperCase()];
 
     if (!mexcTimeframe) {
-      throw new Error(`Unsupported timeframe: ${timeframe}`);
+      throw new Error(`Unsupported timeframe: ${timeframe}. Supported: 1m, 5m, 15m, 30m, 1H, 4H, D, W, M, Y`);
     }
 
     // MEXC public API - no authentication required
@@ -128,10 +148,16 @@ export async function fetchCoinGeckoCandles(symbol, timeframe, limit = 100) {
       throw new Error(`Unsupported symbol for CoinGecko: ${symbol}`);
     }
 
-    // CoinGecko free API has limited historical data
+    // CoinGecko free API has limited historical data - only provides daily OHLC
     // Map timeframes to approximate day ranges
-    let days = '1'; // Default: 1 day
+    let days = '7'; // Default: 7 days
     switch (timeframe.toUpperCase()) {
+      case '1m':
+      case '5m':
+      case '15m':
+      case '30m':
+        days = '1'; // 1 day for sub-hourly
+        break;
       case '1H':
         days = '1'; // 1 day for hourly
         break;
@@ -142,7 +168,11 @@ export async function fetchCoinGeckoCandles(symbol, timeframe, limit = 100) {
         days = '90'; // 90 days for daily
         break;
       case 'W':
-        days = '365'; // 365 days for weekly
+      case 'M':
+        days = '365'; // 365 days for weekly/monthly
+        break;
+      case 'Y':
+        days = 'max'; // Maximum available data for yearly
         break;
       default:
         days = '7';
@@ -203,24 +233,42 @@ export async function fetchFinnhubCandles(symbol, timeframe, count = 100) {
 
     const resolution = TIMEFRAME_MAP.finnhub[timeframe.toUpperCase()];
     if (!resolution) {
-      throw new Error(`Unsupported timeframe: ${timeframe}`);
+      throw new Error(`Unsupported timeframe: ${timeframe}. Supported: 1m, 5m, 15m, 30m, 1H, 4H, D, W, M, Y`);
     }
 
     // Calculate time range for the request
     const now = Math.floor(Date.now() / 1000);
     let intervalSeconds;
     switch (resolution) {
+      case '1':
+        intervalSeconds = 60; // 1 minute
+        break;
+      case '5':
+        intervalSeconds = 300; // 5 minutes
+        break;
+      case '15':
+        intervalSeconds = 900; // 15 minutes
+        break;
+      case '30':
+        intervalSeconds = 1800; // 30 minutes
+        break;
       case '60':
-        intervalSeconds = 3600;
+        intervalSeconds = 3600; // 1 hour
         break;
       case '240':
-        intervalSeconds = 14400;
+        intervalSeconds = 14400; // 4 hours
         break;
       case 'D':
-        intervalSeconds = 86400;
+        intervalSeconds = 86400; // 1 day
         break;
       case 'W':
-        intervalSeconds = 604800;
+        intervalSeconds = 604800; // 1 week
+        break;
+      case 'M':
+        intervalSeconds = 2592000; // ~1 month (30 days)
+        break;
+      case 'Y':
+        intervalSeconds = 31536000; // ~1 year (365 days)
         break;
       default:
         intervalSeconds = 3600;
