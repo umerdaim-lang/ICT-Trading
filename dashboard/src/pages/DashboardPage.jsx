@@ -8,6 +8,7 @@ const POPULAR_SYMBOLS = [
   { value: 'BTCUSDT', label: 'BTC/USDT' },
   { value: 'ETHUSDT', label: 'ETH/USDT' },
   { value: 'BNBUSDT', label: 'BNB/USDT' },
+  { value: 'DOGEUSDT', label: 'DOGE/USDT' },
   { value: 'SOLUSDT', label: 'SOL/USDT' },
   { value: 'XRPUSDT', label: 'XRP/USDT' },
   { value: 'XAUUSD', label: 'XAU/USD (Gold)' },
