@@ -1,13 +1,27 @@
 import axios from 'axios';
 import prisma from '../utils/db.js';
 
-// Crypto symbols that use CoinGecko API (replaced Binance due to cloud IP blocking)
+// Crypto symbols that use MEXC API (primary) with CoinGecko fallback
 const CRYPTO_SYMBOLS = new Set([
   'BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT',
   'ADAUSDT', 'DOGEUSDT', 'AVAXUSDT', 'MATICUSDT', 'LINKUSDT'
 ]);
 
-// CoinGecko coin ID mapping
+// MEXC symbol mapping (same as base symbols)
+const MEXC_SYMBOL_MAP = {
+  'BTCUSDT': 'BTCUSDT',
+  'ETHUSDT': 'ETHUSDT',
+  'BNBUSDT': 'BNBUSDT',
+  'SOLUSDT': 'SOLUSDT',
+  'XRPUSDT': 'XRPUSDT',
+  'ADAUSDT': 'ADAUSDT',
+  'DOGEUSDT': 'DOGEUSDT',
+  'AVAXUSDT': 'AVAXUSDT',
+  'MATICUSDT': 'MATICUSDT',
+  'LINKUSDT': 'LINKUSDT'
+};
+
+// CoinGecko coin ID mapping (fallback)
 const COINGECKO_SYMBOL_MAP = {
   'BTCUSDT': 'bitcoin',
   'ETHUSDT': 'ethereum',
@@ -44,7 +58,74 @@ const FINNHUB_SYMBOL_MAP = {
 };
 
 /**
- * Fetch OHLCV candles from CoinGecko API (free, cloud-friendly)
+ * Fetch OHLCV candles from MEXC API (primary crypto source)
+ * @param {string} symbol - Trading symbol (e.g., 'BTCUSDT')
+ * @param {string} timeframe - '1H', '4H', 'D', 'W'
+ * @param {number} limit - Number of candles to fetch (default 100)
+ * @returns {Promise<Array>} Array of normalized candle objects
+ */
+export async function fetchMexcCandles(symbol, timeframe, limit = 100) {
+  try {
+    const upperSymbol = symbol.toUpperCase();
+    const mexcSymbol = MEXC_SYMBOL_MAP[upperSymbol];
+    if (!mexcSymbol) {
+      throw new Error(`Unsupported symbol for MEXC: ${symbol}`);
+    }
+
+    // Map timeframes to MEXC interval values
+    const mexcTimeframe = {
+      '1H': '1h',
+      '4H': '4h',
+      'D': '1d',
+      'W': '1w'
+    }[timeframe.toUpperCase()];
+
+    if (!mexcTimeframe) {
+      throw new Error(`Unsupported timeframe: ${timeframe}`);
+    }
+
+    const accessKey = process.env.MEXC_ACCESS_KEY;
+    const apiKey = process.env.MEXC_API_KEY;
+
+    if (!accessKey || !apiKey) {
+      throw new Error('MEXC_ACCESS_KEY or MEXC_API_KEY environment variable not set');
+    }
+
+    const url = `https://api.mexc.com/api/v3/klines`;
+    const params = {
+      symbol: mexcSymbol,
+      interval: mexcTimeframe,
+      limit: Math.min(limit, 1000) // MEXC max 1000 candles per request
+    };
+
+    const response = await axios.get(url, {
+      params,
+      headers: {
+        'X-MEXC-APIKEY': accessKey
+      }
+    });
+
+    // MEXC returns array of [timestamp, open, high, low, close, volume, ...]
+    const candles = (response.data || []).map((k) => ({
+      symbol: upperSymbol,
+      timeframe: timeframe.toUpperCase(),
+      timestamp: new Date(parseInt(k[0])),
+      open: parseFloat(k[1]),
+      high: parseFloat(k[2]),
+      low: parseFloat(k[3]),
+      close: parseFloat(k[4]),
+      volume: parseFloat(k[5]) || 0
+    }));
+
+    return candles;
+  } catch (error) {
+    console.error(`[MEXC] Error fetching ${symbol} ${timeframe}:`, error.message);
+    throw new Error(`MEXC fetch failed: ${error.message}`);
+  }
+}
+
+/**
+ * Fetch OHLCV candles from CoinGecko API (fallback, free, cloud-friendly)
  * @param {string} symbol - Trading symbol (e.g., 'BTCUSDT')
  * @param {string} timeframe - '1H', '4H', 'D', 'W'
  * @param {number} limit - Number of candles to fetch (default 100)
@@ -201,6 +282,7 @@ export async function fetchFinnhubCandles(symbol, timeframe, count = 100) {
 
 /**
  * Main entry point - routes to appropriate API based on symbol
+ * Uses MEXC for crypto (primary), falls back to CoinGecko if needed
  * @param {string} symbol - Trading symbol
  * @param {string} timeframe - '1H', '4H', 'D', 'W'
  * @param {number} limit - Number of candles
@@ -209,9 +291,25 @@ export async function fetchFinnhubCandles(symbol, timeframe, count = 100) {
 export async function fetchLiveCandles(symbol, timeframe, limit = 100) {
   const upperSymbol = symbol.toUpperCase();
 
-  // Route to appropriate API (CoinGecko for crypto, Finnhub for metals)
+  // Route to appropriate API
   if (CRYPTO_SYMBOLS.has(upperSymbol)) {
-    return fetchCoinGeckoCandles(symbol, timeframe, limit);
+    // Try MEXC first (better rate limits)
+    try {
+      console.log(`[fetchLiveCandles] Attempting MEXC for ${upperSymbol}...`);
+      const candles = await fetchMexcCandles(symbol, timeframe, limit);
+      console.log(`[fetchLiveCandles] ✅ MEXC successful for ${upperSymbol}`);
+      return candles;
+    } catch (mexcError) {
+      console.warn(`[fetchLiveCandles] MEXC failed: ${mexcError.message}. Trying CoinGecko fallback...`);
+      try {
+        const candles = await fetchCoinGeckoCandles(symbol, timeframe, limit);
+        console.log(`[fetchLiveCandles] ✅ CoinGecko fallback successful for ${upperSymbol}`);
+        return candles;
+      } catch (cgError) {
+        console.error(`[fetchLiveCandles] Both MEXC and CoinGecko failed for ${upperSymbol}`);
+        throw new Error(`Failed to fetch ${upperSymbol}: MEXC - ${mexcError.message}, CoinGecko - ${cgError.message}`);
+      }
+    }
   } else if (FINNHUB_SYMBOL_MAP[upperSymbol]) {
     return fetchFinnhubCandles(symbol, timeframe, limit);
   } else {
@@ -254,7 +352,13 @@ export async function saveCandles(candles, prismaClient = prisma) {
  */
 export async function fetchAndSaveCandles(symbol, timeframe, limit = 100) {
   const upperSymbol = symbol.toUpperCase();
-  const source = CRYPTO_SYMBOLS.has(upperSymbol) ? 'coingecko' : 'finnhub';
+  let source = 'unknown';
+
+  if (CRYPTO_SYMBOLS.has(upperSymbol)) {
+    source = 'mexc (primary) or coingecko (fallback)';
+  } else if (Object.keys(FINNHUB_SYMBOL_MAP).includes(upperSymbol)) {
+    source = 'finnhub';
+  }
 
   // Fetch from appropriate source
   const candles = await fetchLiveCandles(symbol, timeframe, limit);
