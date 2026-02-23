@@ -9,6 +9,7 @@ import analysisRoutes from './src/routes/analysis.js';
 import signalsRoutes from './src/routes/signals.js';
 import webhookRoutes from './src/routes/webhook.js';
 import backtestRoutes from './src/routes/backtest.js';
+import strategyBacktestRoutes from './src/routes/strategyBacktest.js';
 
 // Services
 import { startScheduler } from './src/services/scheduler.service.js';
@@ -49,6 +50,7 @@ app.use('/api/analysis', analysisRoutes);
 app.use('/api/signals', signalsRoutes);
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/backtest', backtestRoutes);
+app.use('/api/strategy-backtest', strategyBacktestRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
