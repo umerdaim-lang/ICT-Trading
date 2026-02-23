@@ -6,7 +6,17 @@ export default function ChartComponent({ data, analysis, loading }) {
   const chartRef = useRef(null);
 
   useEffect(() => {
-    if (!chartContainerRef.current || data.length === 0) return;
+    console.log('[Chart] useEffect triggered - data:', data?.length, 'loading:', loading, 'containerRef:', !!chartContainerRef.current);
+
+    if (!chartContainerRef.current) {
+      console.warn('[Chart] Container ref not available yet');
+      return;
+    }
+
+    if (data.length === 0) {
+      console.warn('[Chart] No data to display yet');
+      return;
+    }
 
     // Get container width and ensure it's valid
     let width = chartContainerRef.current.clientWidth;
@@ -17,6 +27,7 @@ export default function ChartComponent({ data, analysis, loading }) {
     }
 
     try {
+      console.log('[Chart] Creating chart with width:', width, 'height: 500');
       const chart = createChart(chartContainerRef.current, {
         layout: {
           textColor: '#d1d5db',
@@ -26,6 +37,7 @@ export default function ChartComponent({ data, analysis, loading }) {
         width: width,
         height: 500,
       });
+      console.log('[Chart] Chart created successfully');
 
       const candlestickSeries = chart.addCandlestickSeries({
         upColor: '#10b981',
@@ -35,25 +47,35 @@ export default function ChartComponent({ data, analysis, loading }) {
         wickUpColor: '#10b981',
         wickDownColor: '#ef4444',
       });
+      console.log('[Chart] Candlestick series added');
 
       // Format candle data for lightweight-charts
-      const formattedData = data.map(candle => {
+      console.log('[Chart] Formatting', data.length, 'candles...');
+      const formattedData = data.map((candle, idx) => {
         const time = new Date(candle.timestamp).getTime() / 1000;
-        return {
+        const formatted = {
           time,
           open: parseFloat(candle.open),
           high: parseFloat(candle.high),
           low: parseFloat(candle.low),
           close: parseFloat(candle.close)
         };
+        if (idx < 2 || idx === data.length - 1) {
+          console.log(`  [Chart] Candle ${idx}:`, formatted);
+        }
+        return formatted;
       }).sort((a, b) => a.time - b.time);
+
+      console.log('[Chart] Formatted data count:', formattedData.length);
 
       if (formattedData.length === 0) {
         console.warn('[Chart] No valid candle data to display');
         return;
       }
 
+      console.log('[Chart] Setting data on candlestick series...');
       candlestickSeries.setData(formattedData);
+      console.log('[Chart] Data set successfully');
 
       // --- Order Block Zones: two price lines per block (top and bottom) ---
       if (analysis?.orderBlocks && analysis.orderBlocks.length > 0) {
@@ -149,26 +171,35 @@ export default function ChartComponent({ data, analysis, loading }) {
         }
       }
 
+      console.log('[Chart] Fitting content to view...');
       chart.timeScale().fitContent();
+      console.log('[Chart] Chart rendering complete!');
       chartRef.current = chart;
 
       const handleResize = () => {
         if (chartContainerRef.current) {
-          chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+          const newWidth = chartContainerRef.current.clientWidth;
+          console.log('[Chart] Resizing chart to width:', newWidth);
+          chart.applyOptions({ width: newWidth });
         }
       };
       window.addEventListener('resize', handleResize);
 
       return () => {
+        console.log('[Chart] Cleaning up chart...');
         window.removeEventListener('resize', handleResize);
         chart.remove();
       };
     } catch (error) {
-      console.error('[Chart] Error rendering chart:', error);
+      console.error('[Chart] ❌ ERROR rendering chart:', error);
+      console.error('[Chart] Error stack:', error.stack);
+      console.error('[Chart] Error name:', error.name);
+      console.error('[Chart] Error message:', error.message);
     }
   }, [data, analysis]);
 
   if (loading) {
+    console.log('[Chart] Rendering loading state...');
     return (
       <div className="w-full h-[500px] bg-slate-700/50 rounded-lg flex items-center justify-center">
         <div className="flex flex-col items-center">
@@ -180,6 +211,7 @@ export default function ChartComponent({ data, analysis, loading }) {
   }
 
   if (data.length === 0) {
+    console.log('[Chart] Rendering empty state - no data');
     return (
       <div className="w-full h-[500px] bg-slate-700/50 rounded-lg flex items-center justify-center">
         <div className="text-center">

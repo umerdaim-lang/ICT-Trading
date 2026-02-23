@@ -80,12 +80,17 @@ function App() {
 
   const loadData = async () => {
     try {
+      console.log('[App] loadData() called for', symbol, timeframe);
       setLoading(true);
       setError(null);
 
       // Load market data
+      console.log('[App] Fetching market data...');
       const marketRes = await marketDataApi.get(symbol, timeframe, 100);
       const candles = marketRes.data.data.candles || [];
+      console.log('[App] ✅ Loaded', candles.length, 'candles');
+      console.log('[App] First candle:', candles[0]);
+      console.log('[App] Last candle:', candles[candles.length - 1]);
       setChartData(candles);
       setMarketData(candles);
 
@@ -183,18 +188,25 @@ function App() {
 
   const handleFetchLive = async () => {
     try {
+      console.log('[App] handleFetchLive() called for', symbol, timeframe);
       setLoading(true);
       setError(null);
+      console.log('[App] Fetching live data from API...');
       const res = await marketDataApi.fetchLive(symbol, timeframe, 100);
+      console.log('[App] ✅ Live fetch response:', res.data.data);
       const { source, candlesFetched } = res.data.data;
+      console.log('[App] Source:', source, 'Fetched:', candlesFetched, 'candles');
       setLiveDataSource(source);
       setLastLiveFetch(new Date().toISOString());
       setLiveDataEnabled(true);
       // Reload chart data after saving
+      console.log('[App] Reloading chart data...');
       await loadData();
+      console.log('[App] ✅ Fetch Live completed successfully');
       setLoading(false);
     } catch (error) {
-      console.error('Live fetch error:', error);
+      console.error('[App] ❌ Live fetch error:', error);
+      console.error('[App] Error details:', error.response?.data);
       setError(`Live fetch failed: ${error.response?.data?.error?.message || error.message}`);
       setLoading(false);
     }
