@@ -3,7 +3,13 @@ import { analyzeAllICTConcepts } from './ict.service.js';
 import { analyzeMarketDataWithClaude, extractSignalFromAnalysis } from './claude.service.js';
 
 /**
- * Run backtesting on historical market data
+ * Run backtesting on historical market data using WALK-FORWARD ANALYSIS
+ *
+ * IMPORTANT: This implements proper walk-forward testing to avoid look-ahead bias.
+ * For each candle at index i, Claude only analyzes data from candles 0 to i-1
+ * (historical data). It NEVER sees future candles (i+1 onwards).
+ * This ensures realistic backtest results that match real trading conditions.
+ *
  * @param {string} symbol - Trading symbol (e.g., 'BTCUSDT')
  * @param {string} timeframe - Timeframe (e.g., '1H', '4H', 'D')
  * @param {string} startDate - Start date (ISO format)
@@ -58,9 +64,13 @@ export async function runBacktest(symbol, timeframe, startDate, endDate, options
     console.log(`[Backtest] Starting simulation with ${initialCapital} capital...`);
 
     for (let i = 100; i < candles.length; i++) {
+      // Walk-forward approach: only use historical data up to current candle
+      // Do NOT include future candles - this ensures realistic analysis
       const lookbackCandles = candles.slice(Math.max(0, i - 100), i);
       const currentCandle = candles[i];
       const currentPrice = parseFloat(currentCandle.close);
+
+      console.log(`[Backtest] Candle ${i}/${candles.length}: ${currentCandle.timestamp} @ ${currentPrice} (using ${lookbackCandles.length} historical candles)`);
 
       // Run ICT analysis on lookback period
       const ictResults = analyzeAllICTConcepts(lookbackCandles);
