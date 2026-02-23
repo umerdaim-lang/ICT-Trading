@@ -38,10 +38,10 @@ const COINGECKO_SYMBOL_MAP = {
 // Timeframe mapping for various APIs
 const TIMEFRAME_MAP = {
   mexc: {
-    '1m': '1m',
-    '5m': '5m',
-    '15m': '15m',
-    '30m': '30m',
+    '1M': '1m',
+    '5M': '5m',
+    '15M': '15m',
+    '30M': '30m',
     '1H': '1h',
     '4H': '4h',
     'D': '1d',
@@ -51,10 +51,10 @@ const TIMEFRAME_MAP = {
   },
   coingecko: {
     // CoinGecko only has daily OHLC, so we map all to daily
-    '1m': 'daily',
-    '5m': 'daily',
-    '15m': 'daily',
-    '30m': 'daily',
+    '1M': 'daily',
+    '5M': 'daily',
+    '15M': 'daily',
+    '30M': 'daily',
     '1H': 'daily',
     '4H': 'daily',
     'D': 'daily',
@@ -63,10 +63,10 @@ const TIMEFRAME_MAP = {
     'Y': 'daily'
   },
   finnhub: {
-    '1m': '1',
-    '5m': '5',
-    '15m': '15',
-    '30m': '30',
+    '1M': '1',
+    '5M': '5',
+    '15M': '15',
+    '30M': '30',
     '1H': '60',
     '4H': '240',
     'D': 'D',
@@ -151,11 +151,12 @@ export async function fetchCoinGeckoCandles(symbol, timeframe, limit = 100) {
     // CoinGecko free API has limited historical data - only provides daily OHLC
     // Map timeframes to approximate day ranges
     let days = '7'; // Default: 7 days
-    switch (timeframe.toUpperCase()) {
-      case '1m':
-      case '5m':
-      case '15m':
-      case '30m':
+    const tf = timeframe.toUpperCase();
+    switch (tf) {
+      case '1M':
+      case '5M':
+      case '15M':
+      case '30M':
         days = '1'; // 1 day for sub-hourly
         break;
       case '1H':
@@ -236,42 +237,33 @@ export async function fetchFinnhubCandles(symbol, timeframe, count = 100) {
       throw new Error(`Unsupported timeframe: ${timeframe}. Supported: 1m, 5m, 15m, 30m, 1H, 4H, D, W, M, Y`);
     }
 
-    // Calculate time range for the request
+    // Calculate time range for the request based on resolution
     const now = Math.floor(Date.now() / 1000);
     let intervalSeconds;
-    switch (resolution) {
-      case '1':
-        intervalSeconds = 60; // 1 minute
-        break;
-      case '5':
-        intervalSeconds = 300; // 5 minutes
-        break;
-      case '15':
-        intervalSeconds = 900; // 15 minutes
-        break;
-      case '30':
-        intervalSeconds = 1800; // 30 minutes
-        break;
-      case '60':
-        intervalSeconds = 3600; // 1 hour
-        break;
-      case '240':
-        intervalSeconds = 14400; // 4 hours
-        break;
-      case 'D':
-        intervalSeconds = 86400; // 1 day
-        break;
-      case 'W':
-        intervalSeconds = 604800; // 1 week
-        break;
-      case 'M':
-        intervalSeconds = 2592000; // ~1 month (30 days)
-        break;
-      case 'Y':
-        intervalSeconds = 31536000; // ~1 year (365 days)
-        break;
-      default:
-        intervalSeconds = 3600;
+
+    // Finnhub returns values like '1', '5', '15', '30', '60', '240', 'D', 'W', 'M', 'Y'
+    if (resolution === '1') {
+      intervalSeconds = 60; // 1 minute
+    } else if (resolution === '5') {
+      intervalSeconds = 300; // 5 minutes
+    } else if (resolution === '15') {
+      intervalSeconds = 900; // 15 minutes
+    } else if (resolution === '30') {
+      intervalSeconds = 1800; // 30 minutes
+    } else if (resolution === '60') {
+      intervalSeconds = 3600; // 1 hour
+    } else if (resolution === '240') {
+      intervalSeconds = 14400; // 4 hours
+    } else if (resolution === 'D') {
+      intervalSeconds = 86400; // 1 day
+    } else if (resolution === 'W') {
+      intervalSeconds = 604800; // 1 week
+    } else if (resolution === 'M') {
+      intervalSeconds = 2592000; // ~1 month (30 days)
+    } else if (resolution === 'Y') {
+      intervalSeconds = 31536000; // ~1 year (365 days)
+    } else {
+      intervalSeconds = 3600; // Default to 1 hour
     }
 
     const from = now - intervalSeconds * count;
