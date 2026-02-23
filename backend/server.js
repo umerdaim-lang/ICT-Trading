@@ -8,6 +8,7 @@ import marketDataRoutes from './src/routes/marketData.js';
 import analysisRoutes from './src/routes/analysis.js';
 import signalsRoutes from './src/routes/signals.js';
 import webhookRoutes from './src/routes/webhook.js';
+import backtestRoutes from './src/routes/backtest.js';
 
 // Services
 import { startScheduler } from './src/services/scheduler.service.js';
@@ -47,6 +48,7 @@ app.use('/api/market-data', marketDataRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/signals', signalsRoutes);
 app.use('/api/webhook', webhookRoutes);
+app.use('/api/backtest', backtestRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
