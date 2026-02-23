@@ -61,7 +61,7 @@ Provide your narrative analysis first, then end with a JSON block:
   "biasScore": 1-10,
   "priceContext": "premium" or "discount" or "equilibrium",
   "poi": { "type": "OB|FVG|SDZ|Breaker", "high": number, "low": number },
-  "entry": number,
+  "entryPrice": number,
   "stopLoss": number,
   "takeProfit": number,
   "riskReward": number,
@@ -98,7 +98,13 @@ export const extractSignalFromAnalysis = async (claudeAnalysis) => {
     try {
       const parsed = JSON.parse(jsonBlockMatch[1].trim());
       // Ensure it has the shape the rest of the code expects
-      if (parsed.signal !== undefined) return parsed;
+      if (parsed.signal !== undefined) {
+        // Map "entry" to "entryPrice" for backward compatibility
+        if (parsed.entry !== undefined && parsed.entryPrice === undefined) {
+          parsed.entryPrice = parsed.entry;
+        }
+        return parsed;
+      }
     } catch (_) {
       // Fall through to slow path
     }

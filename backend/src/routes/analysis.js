@@ -231,12 +231,14 @@ router.post('/:analysisId/extract-signal', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Signal extraction error:', error);
+    console.error('[SignalExtraction] ❌ ERROR:', error.message);
+    console.error('[SignalExtraction] Stack:', error.stack);
     res.status(500).json({
       success: false,
       error: {
         code: 'EXTRACTION_ERROR',
-        message: error.message
+        message: error.message,
+        details: error.stack
       }
     });
   }
