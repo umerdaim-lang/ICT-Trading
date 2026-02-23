@@ -84,11 +84,11 @@ export async function fetchMexcCandles(symbol, timeframe, limit = 100) {
       throw new Error(`Unsupported timeframe: ${timeframe}`);
     }
 
-    const accessKey = process.env.MEXC_ACCESS_KEY;
-    const apiKey = process.env.MEXC_API_KEY;
+    const accessKey = process.env.MEXC_ACCESS_KEY || 'mx0vglrLturYEqI0ec';
+    const apiKey = process.env.MEXC_API_KEY || '82d082d1889441b38acbc866ea652412';
 
     if (!accessKey || !apiKey) {
-      throw new Error('MEXC_ACCESS_KEY or MEXC_API_KEY environment variable not set');
+      throw new Error('MEXC credentials not available');
     }
 
     const url = `https://api.mexc.com/api/v3/klines`;
