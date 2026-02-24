@@ -33,3 +33,4 @@ prisma/migrations/
 # Render/Deployment
 .render.yml
 render.yaml
+set_render_env.sh
