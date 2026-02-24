@@ -54,14 +54,22 @@ export default function BacktestTradesPanel({ onTradesLoaded, trades, summary, l
         </div>
       )}
 
-      {/* Load Button */}
-      <button
-        onClick={onTradesLoaded}
-        disabled={loading}
-        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors mb-4 text-sm"
-      >
-        {loading ? 'Loading Trades...' : 'Load Backtest Trades'}
-      </button>
+      {/* Buttons */}
+      <div className="space-y-2 mb-4">
+        <button
+          onClick={onTradesLoaded}
+          disabled={loading}
+          className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors text-sm"
+        >
+          {loading ? 'Loading Trades...' : 'Load Backtest Trades'}
+        </button>
+        <a
+          href="/detailed-trades"
+          className="w-full block px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors text-sm text-center"
+        >
+          📊 View All 417 Trades
+        </a>
+      </div>
 
       {/* Expanded Content */}
       {expanded && trades && trades.length > 0 && (
