@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { backtestApi } from '../lib/api';
 
 export default function DetailedTradesReport() {
@@ -7,6 +8,7 @@ export default function DetailedTradesReport() {
   const [filterType, setFilterType] = useState('all');
   const [sortBy, setSortBy] = useState('id');
   const [searchId, setSearchId] = useState('');
+  const [expandedTradeId, setExpandedTradeId] = useState(null);
 
   useEffect(() => {
     fetchTrades();
@@ -147,14 +149,20 @@ export default function DetailedTradesReport() {
           </thead>
           <tbody>
             {displayTrades.map((trade, idx) => (
-              <tr
-                key={idx}
-                className={`border-b border-slate-700 hover:bg-slate-800/50 transition-colors ${
-                  trade.isWin ? 'bg-emerald-900/10' : 'bg-red-900/10'
-                }`}
-              >
-                {/* ID */}
-                <td className="px-4 py-3 font-bold text-white">{trade.id}</td>
+              <React.Fragment key={idx}>
+                <tr
+                  onClick={() => setExpandedTradeId(expandedTradeId === trade.id ? null : trade.id)}
+                  className={`border-b border-slate-700 hover:bg-slate-800/50 transition-colors cursor-pointer ${
+                    trade.isWin ? 'bg-emerald-900/10' : 'bg-red-900/10'
+                  }`}
+                >
+                {/* ID + Expand */}
+                <td className="px-4 py-3 font-bold text-white flex items-center gap-2">
+                  <span className="text-gray-400">
+                    {expandedTradeId === trade.id ? '▼' : '▶'}
+                  </span>
+                  {trade.id}
+                </td>
 
                 {/* Side */}
                 <td className="px-4 py-3">
@@ -224,6 +232,114 @@ export default function DetailedTradesReport() {
                   </div>
                 </td>
               </tr>
+
+              {/* Expanded Row - Trade Charts */}
+              {expandedTradeId === trade.id && (
+                <tr className="bg-slate-900/50 border-b border-slate-700">
+                  <td colSpan="11" className="px-4 py-6">
+                    <div className="space-y-6">
+                      {/* Trade Header */}
+                      <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+                        <h4 className="text-lg font-bold text-white mb-3">
+                          Trade #{trade.id} Chart Analysis
+                        </h4>
+
+                        {/* Setup Breakdown */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="bg-blue-900/20 border border-blue-700 rounded p-3">
+                            <p className="text-blue-300 text-xs font-bold mb-1">ENTRY SETUP</p>
+                            <p className="text-blue-200 font-mono text-sm break-words">{trade.entryReason}</p>
+                          </div>
+                          <div className="bg-orange-900/20 border border-orange-700 rounded p-3">
+                            <p className="text-orange-300 text-xs font-bold mb-1">EXIT REASON</p>
+                            <p className="text-orange-200 text-sm">{trade.exitReason}</p>
+                          </div>
+                        </div>
+
+                        {/* Price & Time Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          <div className="bg-slate-700/50 rounded p-2">
+                            <p className="text-gray-400 text-xs">Entry Time</p>
+                            <p className="text-white font-bold text-xs">{new Date(trade.entryTime).toLocaleTimeString()}</p>
+                          </div>
+                          <div className="bg-slate-700/50 rounded p-2">
+                            <p className="text-gray-400 text-xs">Entry Price</p>
+                            <p className="text-white font-bold">${trade.entryPrice?.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-slate-700/50 rounded p-2">
+                            <p className="text-gray-400 text-xs">Exit Price</p>
+                            <p className="text-white font-bold">${trade.exitPrice?.toFixed(2)}</p>
+                          </div>
+                          <div className={`rounded p-2 ${trade.isWin ? 'bg-emerald-900/30' : 'bg-red-900/30'}`}>
+                            <p className={`text-xs ${trade.isWin ? 'text-emerald-400' : 'text-red-400'}`}>P&L</p>
+                            <p className={`font-bold ${trade.isWin ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {trade.isWin ? '+' : ''}{trade.profit?.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Chart Data Explanation */}
+                      <div className="bg-amber-900/20 border border-amber-700 rounded-lg p-4">
+                        <h5 className="font-bold text-amber-300 mb-3">📊 What Claude Was Analyzing:</h5>
+
+                        <div className="space-y-4">
+                          {/* D1 Explanation */}
+                          <div className="bg-slate-800/50 rounded p-3 border-l-4 border-purple-500">
+                            <p className="text-purple-300 font-bold text-sm mb-2">D1 (Daily Chart)</p>
+                            <div className="text-xs text-gray-300 space-y-1">
+                              <p>• <strong>Purpose:</strong> Determines trading bias (LONG vs SHORT)</p>
+                              <p>• <strong>Claude looked at:</strong> Previous day's candle close vs open</p>
+                              <p>• <strong>Decision:</strong> {trade.entryReason.includes('D1:LONG') ? '📈 LONG (previous day closed green)' : '📉 SHORT (previous day closed red)'}</p>
+                              <p>• <strong>Setup:</strong> {trade.entryReason.split('|')[0].trim()}</p>
+                            </div>
+                          </div>
+
+                          {/* H1 Explanation */}
+                          <div className="bg-slate-800/50 rounded p-3 border-l-4 border-blue-500">
+                            <p className="text-blue-300 font-bold text-sm mb-2">H1 (Hourly Chart - Order Blocks)</p>
+                            <div className="text-xs text-gray-300 space-y-1">
+                              <p>• <strong>Purpose:</strong> Find confluence zones (order blocks)</p>
+                              <p>• <strong>Claude looked at:</strong> Last 100 hourly candles (~4 days)</p>
+                              <p>• <strong>Analysis:</strong> {trade.entryReason.includes('H1:') ? trade.entryReason.split('|')[1].trim() : 'Order blocks identified'}</p>
+                              <p>• <strong>Quality:</strong> More blocks = stronger setup</p>
+                              <p>• <strong>Decision:</strong> {trade.quality === 'A+' ? '🌟 A+ (3+ blocks)' : trade.quality === 'A' ? '⭐ A (2 blocks)' : '⚡ B (1 block)'}</p>
+                            </div>
+                          </div>
+
+                          {/* M5 Explanation */}
+                          <div className="bg-slate-800/50 rounded p-3 border-l-4 border-green-500">
+                            <p className="text-green-300 font-bold text-sm mb-2">M5 (5-Minute Chart - Entry Point)</p>
+                            <div className="text-xs text-gray-300 space-y-1">
+                              <p>• <strong>Purpose:</strong> Precise entry timing</p>
+                              <p>• <strong>Claude looked at:</strong> Candles around entry time</p>
+                              <p>• <strong>Entry:</strong> {new Date(trade.entryTime).toLocaleTimeString()} at ${trade.entryPrice?.toFixed(2)}</p>
+                              <p>• <strong>Direction:</strong> {trade.side === 'LONG' ? '📈 Entered LONG (buying)' : '📉 Entered SHORT (selling)'}</p>
+                              <p>• <strong>Outcome:</strong> Price moved to ${trade.exitPrice?.toFixed(2)} ({trade.isWin ? 'profitable ✓' : 'loss ✗'})</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Educational Note */}
+                      <div className="bg-slate-700/50 rounded p-3 text-xs text-gray-400">
+                        <p className="mb-2">
+                          <strong>How This Trade Worked:</strong> Claude uses a 3-timeframe analysis:
+                        </p>
+                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                          <li>D1 (Daily) = Determines direction and bias</li>
+                          <li>H1 (Hourly) = Validates with order block confluence</li>
+                          <li>M5 (5-Minute) = Executes entry at precise time</li>
+                        </ol>
+                        <p className="mt-2">
+                          When all three align, you get your trade signal. The more factors align, the higher the quality (A+ &gt; A &gt; B).
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
             ))}
           </tbody>
         </table>
