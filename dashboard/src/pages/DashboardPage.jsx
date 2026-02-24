@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTradingStore } from '../store/tradingStore';
 import ChartComponent from '../components/Chart';
 import SignalPanel from '../components/SignalPanel';
 import AnalysisLog from '../components/AnalysisLog';
+import BacktestTradesPanel from '../components/BacktestTradesPanel';
+import { backtestApi } from '../lib/api';
 
 const POPULAR_SYMBOLS = [
   { value: 'BTCUSDT', label: 'BTC/USDT' },
@@ -38,6 +40,31 @@ export default function DashboardPage({
   const [csvInput, setCsvInput] = useState('');
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
   const [showCustomSymbol, setShowCustomSymbol] = useState(false);
+  const [backtestTrades, setBacktestTrades] = useState([]);
+  const [backtestSummary, setBacktestSummary] = useState(null);
+  const [backtestLoading, setBacktestLoading] = useState(false);
+
+  const fetchBacktestTrades = async () => {
+    try {
+      setBacktestLoading(true);
+      const [tradesRes, summaryRes] = await Promise.all([
+        backtestApi.getTrades(),
+        backtestApi.getSummary()
+      ]);
+
+      if (tradesRes.data?.success) {
+        setBacktestTrades(tradesRes.data.data?.trades || []);
+      }
+
+      if (summaryRes.data?.success) {
+        setBacktestSummary(summaryRes.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching backtest data:', error);
+    } finally {
+      setBacktestLoading(false);
+    }
+  };
 
   const handleUpload = async () => {
     if (!csvInput.trim()) {
@@ -225,6 +252,7 @@ export default function DashboardPage({
               data={chartData}
               analysis={analysisData}
               loading={loading}
+              trades={backtestTrades}
             />
           </div>
 
@@ -237,10 +265,18 @@ export default function DashboardPage({
           )}
         </div>
 
-        {/* Signals Panel */}
-        <div>
+        {/* Signals & Backtest Panel */}
+        <div className="space-y-6">
           <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-6 sticky top-6">
             <SignalPanel analysisData={analysisData} loading={loading} />
+          </div>
+          <div>
+            <BacktestTradesPanel
+              onTradesLoaded={fetchBacktestTrades}
+              trades={backtestTrades}
+              summary={backtestSummary}
+              loading={backtestLoading}
+            />
           </div>
         </div>
       </div>

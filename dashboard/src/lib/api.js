@@ -63,4 +63,19 @@ export const webhookApi = {
     api.get('/api/webhook/status')
 };
 
+// Backtest API
+export const backtestApi = {
+  getTrades: () =>
+    api.get('/api/backtest-trades'),
+
+  getSummary: () =>
+    api.get('/api/backtest-trades/summary'),
+
+  getWinningTrades: () =>
+    api.get('/api/backtest-trades/winning'),
+
+  getLosingTrades: () =>
+    api.get('/api/backtest-trades/losing')
+};
+
 export default api;

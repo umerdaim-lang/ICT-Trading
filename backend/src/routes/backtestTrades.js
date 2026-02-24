@@ -24,7 +24,15 @@ router.get('/', (req, res) => {
       });
     }
 
-    const tradesData = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
+    let tradesData = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
+
+    // Ensure trades have isWin field (calculate if missing)
+    if (tradesData.trades) {
+      tradesData.trades = tradesData.trades.map(trade => ({
+        ...trade,
+        isWin: trade.isWin !== undefined ? trade.isWin : (trade.profit > 0)
+      }));
+    }
 
     res.json({
       success: true,
@@ -57,13 +65,21 @@ router.get('/summary', (req, res) => {
       });
     }
 
-    const tradesData = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
-    const trades = tradesData.trades || [];
+    let tradesData = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
+    let trades = tradesData.trades || [];
+
+    // Ensure trades have isWin field (calculate if missing)
+    trades = trades.map(trade => ({
+      ...trade,
+      isWin: trade.isWin !== undefined ? trade.isWin : (trade.profit > 0)
+    }));
 
     if (trades.length === 0) {
       return res.json({
         success: true,
         data: {
+          symbol: tradesData.symbol,
+          period: tradesData.period,
           totalTrades: 0,
           winningTrades: 0,
           losingTrades: 0,
@@ -118,8 +134,12 @@ router.get('/winning', (req, res) => {
       });
     }
 
-    const tradesData = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
-    const winning = tradesData.trades.filter(t => t.isWin);
+    let tradesData = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
+    const trades = (tradesData.trades || []).map(trade => ({
+      ...trade,
+      isWin: trade.isWin !== undefined ? trade.isWin : (trade.profit > 0)
+    }));
+    const winning = trades.filter(t => t.isWin);
 
     res.json({
       success: true,
@@ -152,8 +172,12 @@ router.get('/losing', (req, res) => {
       });
     }
 
-    const tradesData = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
-    const losing = tradesData.trades.filter(t => !t.isWin);
+    let tradesData = JSON.parse(fs.readFileSync(tradesPath, 'utf8'));
+    const trades = (tradesData.trades || []).map(trade => ({
+      ...trade,
+      isWin: trade.isWin !== undefined ? trade.isWin : (trade.profit > 0)
+    }));
+    const losing = trades.filter(t => !t.isWin);
 
     res.json({
       success: true,

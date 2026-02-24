@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { createChart } from 'lightweight-charts';
 
-export default function ChartComponent({ data, analysis, loading }) {
+export default function ChartComponent({ data, analysis, loading, trades = [] }) {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
 
   useEffect(() => {
-    console.log('[Chart] useEffect triggered - data:', data?.length, 'loading:', loading, 'containerRef:', !!chartContainerRef.current);
+    console.log('[Chart] useEffect triggered - data:', data?.length, 'loading:', loading, 'trades:', trades?.length, 'containerRef:', !!chartContainerRef.current);
 
     if (!chartContainerRef.current) {
       console.warn('[Chart] Container ref not available yet');
@@ -161,9 +161,9 @@ export default function ChartComponent({ data, analysis, loading }) {
       }
 
       // --- Swing High/Low Markers ---
-      if (analysis?.liquidityLevels) {
-        const markers = [];
+      const markers = [];
 
+      if (analysis?.liquidityLevels) {
         (analysis.liquidityLevels.highs || []).slice(-5).forEach(sh => {
           const time = new Date(sh.timestamp).getTime() / 1000;
           if (!isNaN(time)) {
@@ -191,12 +191,47 @@ export default function ChartComponent({ data, analysis, loading }) {
             });
           }
         });
+      }
 
-        // setMarkers requires markers sorted by time
-        markers.sort((a, b) => a.time - b.time);
-        if (markers.length > 0) {
-          candlestickSeries.setMarkers(markers);
-        }
+      // --- Backtest Trade Markers ---
+      if (trades && trades.length > 0) {
+        trades.slice(-50).forEach((trade, idx) => {
+          // Entry marker
+          if (trade.entryTime) {
+            const entryTime = new Date(trade.entryTime).getTime() / 1000;
+            if (!isNaN(entryTime)) {
+              markers.push({
+                time: entryTime,
+                position: 'belowBar',
+                color: trade.side === 'LONG' ? '#10b981' : '#f87171',
+                shape: trade.side === 'LONG' ? 'arrowUp' : 'arrowDown',
+                text: trade.side === 'LONG' ? 'BUY' : 'SELL',
+                size: 2
+              });
+            }
+          }
+
+          // Exit marker
+          if (trade.exitTime) {
+            const exitTime = new Date(trade.exitTime).getTime() / 1000;
+            if (!isNaN(exitTime)) {
+              markers.push({
+                time: exitTime,
+                position: 'aboveBar',
+                color: trade.isWin ? '#10b981' : '#ef4444',
+                shape: 'circle',
+                text: trade.isWin ? '✓' : '✗',
+                size: 2
+              });
+            }
+          }
+        });
+      }
+
+      // setMarkers requires markers sorted by time
+      markers.sort((a, b) => a.time - b.time);
+      if (markers.length > 0) {
+        candlestickSeries.setMarkers(markers);
       }
 
       console.log('[Chart] Fitting content to view...');
@@ -224,7 +259,7 @@ export default function ChartComponent({ data, analysis, loading }) {
       console.error('[Chart] Error name:', error.name);
       console.error('[Chart] Error message:', error.message);
     }
-  }, [data, analysis, loading]);
+  }, [data, analysis, loading, trades]);
 
   if (loading) {
     console.log('[Chart] Rendering loading state...');
