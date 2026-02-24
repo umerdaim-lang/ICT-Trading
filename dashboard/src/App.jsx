@@ -2,9 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { marketDataApi, analysisApi, signalsApi, webhookApi } from './lib/api';
 import { useTradingStore } from './store/tradingStore';
 import DashboardPage from './pages/DashboardPage';
+import DetailedTradesPage from './pages/DetailedTradesPage';
 import './index.css';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('dashboard');
+
   const {
     symbol,
     timeframe,
@@ -26,6 +29,19 @@ function App() {
   const [chartData, setChartData] = useState([]);
   const [analysisData, setAnalysisData] = useState(null);
   const livePollingRef = useRef(null);
+
+  // Simple hash-based routing
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1) || 'dashboard';
+      setCurrentPage(hash);
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange();
+
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -214,19 +230,23 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
-      <DashboardPage
-        chartData={chartData}
-        analysisData={analysisData}
-        onRunAnalysis={handleRunAnalysis}
-        onUploadData={handleUploadData}
-        onFetchLive={handleFetchLive}
-        liveStatus={{
-          enabled: liveDataEnabled,
-          source: liveDataSource,
-          lastFetch: lastLiveFetch,
-          webhookLastReceived
-        }}
-      />
+      {currentPage === 'detailed-trades' ? (
+        <DetailedTradesPage />
+      ) : (
+        <DashboardPage
+          chartData={chartData}
+          analysisData={analysisData}
+          onRunAnalysis={handleRunAnalysis}
+          onUploadData={handleUploadData}
+          onFetchLive={handleFetchLive}
+          liveStatus={{
+            enabled: liveDataEnabled,
+            source: liveDataSource,
+            lastFetch: lastLiveFetch,
+            webhookLastReceived
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -64,7 +64,7 @@ export default function BacktestTradesPanel({ onTradesLoaded, trades, summary, l
           {loading ? 'Loading Trades...' : 'Load Backtest Trades'}
         </button>
         <a
-          href="/detailed-trades"
+          href="#detailed-trades"
           className="w-full block px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors text-sm text-center"
         >
           📊 View All 417 Trades

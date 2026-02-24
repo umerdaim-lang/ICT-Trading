@@ -7,7 +7,11 @@ export default function DetailedTradesPage() {
         {/* Back Navigation */}
         <div className="mb-6">
           <a
-            href="/"
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.hash = '';
+            }}
             className="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 transition-colors"
           >
             <span>←</span>
